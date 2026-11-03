@@ -1,7 +1,7 @@
 import { useStore, type FrostingStyle } from '../../store'
 import Swatches from '../Swatches'
 
-export const FROSTING_SWATCHES = [
+const FROSTING_SWATCHES = [
   '#fff4ec', '#fbe7c6', '#f7c6d0', '#f29bb2', '#c8e6d0', '#b9d8f2',
   '#d8c8ef', '#fff0a8', '#6b4030', '#c9874a', '#e4495f', '#3c3c3c',
 ]

@@ -25,7 +25,7 @@ export default function BottomControls() {
       <button className="btn small" onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)">
         Undo
       </button>
-      <button className="btn small" onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)">
+      <button className="btn small redo" onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)">
         Redo
       </button>
     </div>

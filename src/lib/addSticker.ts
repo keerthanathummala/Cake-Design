@@ -12,7 +12,10 @@ export async function addStickerAt(src: string, at?: { x: number; y: number }) {
   const width = ratio >= 1 ? base * Math.min(ratio, 2) : base * ratio
   const height = width / ratio
   const tiers = useStore.getState().tiers
-  const p = at ?? { x: CX, y: PLATE_Y - TIER_H * (tiers - 0.45) }
+  // Without a drop point, place it on the front of the top tier, nudged so
+  // several taps in a row don't stack exactly on top of each other.
+  const n = useStore.getState().stickers.length
+  const p = at ?? { x: CX + ((n % 5) - 2) * 26, y: PLATE_Y - TIER_H * (tiers - 0.45) + (n % 3) * 10 }
   useStore.getState().addSticker({ src, x: p.x, y: p.y, width, height, rotation: 0, scale: 1 })
   useStore.getState().setStep('stickers')
 }

@@ -1,4 +1,5 @@
 .app {
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -554,4 +555,117 @@
   background: none;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+}
+
+/* Phones and narrow windows: the stage on top, panels as a drawer below. */
+@media (max-width: 820px) {
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .stepbar {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 4px;
+  }
+
+  .step {
+    padding: 4px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .step .label {
+    display: none;
+  }
+
+  .step.on .label {
+    display: inline;
+    font-size: 13px;
+  }
+
+  .workspace {
+    flex-direction: column;
+  }
+
+  .stage-area {
+    order: 1;
+    flex: 1 1 48%;
+  }
+
+  .left-panel,
+  .right-panel {
+    order: 2;
+    width: 100%;
+    flex: 0 0 auto;
+    max-height: 40vh;
+    border: none;
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.06);
+    padding: 14px 16px;
+  }
+
+  .right-panel {
+    order: 3;
+    border-radius: 0;
+  }
+
+  .stage-center {
+    margin: 8px auto;
+  }
+
+  .sticker-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .choice-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .bottombar {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .bottombar > .btn {
+    padding: 7px 12px;
+  }
+
+  .bottom-controls {
+    gap: 4px;
+  }
+
+  .bottom-controls .redo,
+  .zoom-pct {
+    display: none;
+  }
+
+  .zoom {
+    margin-right: 2px;
+  }
+
+  .bottom-controls .btn.small {
+    padding: 5px 8px;
+  }
+
+  .sticker-toolbar {
+    top: 8px;
+  }
+
+  .size-control input {
+    width: 64px;
+  }
+
+  .color-fab {
+    top: auto;
+    bottom: 70px;
+  }
 }

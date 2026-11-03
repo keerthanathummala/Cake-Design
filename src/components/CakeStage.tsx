@@ -38,6 +38,26 @@ export default function CakeStage() {
     stageRef.current = konvaRef.current
   })
 
+  // Wheel: Ctrl/Cmd zooms the view, otherwise it resizes the selected sticker.
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      const st = useStore.getState()
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        st.setZoom(st.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1))
+        return
+      }
+      const s = st.step === 'stickers' && st.stickers.find((x) => x.id === st.selectedId)
+      if (!s) return
+      e.preventDefault()
+      st.updateSticker(s.id, { scale: Math.max(0.2, Math.min(4, s.scale * (e.deltaY < 0 ? 1.08 : 1 / 1.08))) })
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
   const scale = fit * zoom
 
   return (
@@ -60,20 +80,6 @@ export default function CakeStage() {
           stage.setPointersPositions(e)
           const p = stage.getPointerPosition()
           if (p) addStickerAt(src, { x: p.x / scale, y: p.y / scale })
-        }}
-        onWheel={(e) => {
-          // Mouse wheel over the stage resizes the selected sticker.
-          const st = useStore.getState()
-          if (e.ctrlKey || e.metaKey) {
-            // Ctrl + wheel zooms the whole view.
-            e.preventDefault()
-            st.setZoom(st.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1))
-            return
-          }
-          const s = st.step === 'stickers' && st.stickers.find((x) => x.id === st.selectedId)
-          if (!s) return
-          const next = Math.max(0.2, Math.min(4, s.scale * (e.deltaY < 0 ? 1.08 : 1 / 1.08)))
-          st.updateSticker(s.id, { scale: next })
         }}
       >
         <Stage

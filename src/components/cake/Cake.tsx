@@ -9,7 +9,8 @@ import { dollops, tierProgress } from '../../lib/frosting'
 import { usePipingProgress } from '../../hooks/usePipingProgress'
 import Frosting from './Frosting'
 import PipingBag from './PipingBag'
-import Tier, { bounceOut } from './Tier'
+import { bounceOut } from '../../lib/easing'
+import Tier from './Tier'
 
 type Crumb = { id: number; x: number; y: number; vx: number; vy: number; r: number }
 
@@ -72,7 +73,7 @@ export default function Cake() {
       <Group ref={groupRef} x={CX} offsetX={CX} y={0}>
         {Array.from({ length: tiers }, (_, i) => (
           <Tier key={i} index={i} color={color} filling={filling} dropIn={i >= dropFrom}>
-            <Frosting index={i} style={style} color={frosting} progress={tierProgress(progress, i, tiers)} />
+            <Frosting index={i} style={style} color={frosting} progress={tierProgress(progress, i, tiers)} isTop={i === tiers - 1} />
           </Tier>
         ))}
         {style && progress < 1 && <Bag progress={progress} tiers={tiers} style={style} color={frosting} />}
@@ -137,7 +138,7 @@ function CrumbDot({ c, color }: { c: Crumb; color: string }) {
 function Bag({ progress, tiers, style, color }: { progress: number; tiers: number; style: 'swirl' | 'twist'; color: string }) {
   const active = Math.max(0, Math.min(tiers - 1, Math.floor(progress * tiers)))
   const local = tierProgress(progress, active, tiers)
-  const pts = dollops(active, style)
+  const pts = dollops(active, style, active === tiers - 1)
   const pipe = Math.max(0, (local - 0.2) / 0.8)
   const d = pts[Math.max(0, Math.min(pts.length - 1, Math.floor(pts.length * pipe)))]
   if (!d) return null

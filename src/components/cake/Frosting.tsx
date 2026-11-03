@@ -10,18 +10,19 @@ type Props = {
   color: string
   /** 0..1, how much of this tier has been piped. */
   progress: number
+  isTop: boolean
 }
 
 /**
  * Buttercream on one tier: a glossy coat with drips down the front, then either
  * a swirl of piped dollops or a ring of twisted rosettes.
  */
-export default function Frosting({ index, style, color, progress }: Props) {
+export default function Frosting({ index, style, color, progress, isTop }: Props) {
   if (!style || progress <= 0) return null
   const { rx, ry, top, base } = tierBox(index)
   const coat = Math.min(1, progress / 0.25)
   const pipe = Math.max(0, (progress - 0.2) / 0.8)
-  const points = dollops(index, style)
+  const points = dollops(index, style, isTop)
   const shown = points.slice(0, Math.ceil(points.length * pipe))
   const segs = Math.round(rx / 13)
   const drips = dripLengths(index, segs)
@@ -29,7 +30,7 @@ export default function Frosting({ index, style, color, progress }: Props) {
   const Ry = ry + 3
 
   // Rosettes nearer the back are drawn first so front ones overlap them.
-  const ordered = style === 'twist' ? [...shown].sort((a, b) => a.y - b.y) : shown
+  const ordered = style === 'twist' || !isTop ? [...shown].sort((a, b) => a.y - b.y) : shown
 
   return (
     <Group listening={false}>
