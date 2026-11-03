@@ -1,23 +1,23 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import './App.css'
-import CakeStage from './components/CakeStage'
 import BottomControls from './components/BottomControls'
-import StepBar from './components/StepBar'
 import ColorPanel from './components/color/ColorPanel'
 import BackgroundPanel from './components/panels/BackgroundPanel'
 import DownloadPanel from './components/panels/DownloadPanel'
 import FlavorPanel from './components/panels/FlavorPanel'
 import FrostingPanel from './components/panels/FrostingPanel'
-import StickerPanel from './components/panels/StickerPanel'
-import TierPanel from './components/panels/TierPanel'
+import ShapePanel from './components/panels/ShapePanel'
+import StepBar from './components/StepBar'
 import { STEPS, useStore } from './store'
+
+const Scene = lazy(() => import('./three/Scene'))
 
 export default function App() {
   const step = useStore((s) => s.step)
   const flavor = useStore((s) => s.flavor)
   const setStep = useStore((s) => s.setStep)
   const idx = STEPS.findIndex((s) => s.id === step)
-  const nextLocked = idx === 1 && !flavor
+  const nextLocked = step === 'flavor' && !flavor
 
   // Undo / redo shortcuts.
   useEffect(() => {
@@ -47,29 +47,29 @@ export default function App() {
         <StepBar />
       </header>
 
-      <main className="workspace" style={{ position: 'relative' }}>
+      <main className="workspace">
         <aside className="left-panel" aria-label="Options">
-          {step === 'tiers' && <TierPanel />}
+          {step === 'shape' && <ShapePanel />}
           {step === 'flavor' && <FlavorPanel />}
           {step === 'frosting' && <FrostingPanel />}
-          {step === 'stickers' && <StickerPanel />}
           {step === 'background' && <BackgroundPanel />}
           {step === 'download' && <DownloadPanel />}
         </aside>
 
         <section className="stage-area">
-          <CakeStage />
+          <div className="stage-wrap">
+            <Suspense fallback={<div className="stage-loading">Setting the table…</div>}>
+              <Scene />
+            </Suspense>
+            {!flavor && step !== 'shape' && <div className="stage-tip">Pick a flavor to drop the cake onto the stand.</div>}
+          </div>
           <footer className="bottombar">
             <BottomControls />
             <div className="spacer" />
             <button className="btn" disabled={idx === 0} onClick={() => setStep(STEPS[idx - 1].id)}>
               Back
             </button>
-            <button
-              className="btn primary"
-              disabled={idx === STEPS.length - 1 || nextLocked}
-              onClick={() => setStep(STEPS[idx + 1].id)}
-            >
+            <button className="btn primary" disabled={idx === STEPS.length - 1 || nextLocked} onClick={() => setStep(STEPS[idx + 1].id)}>
               Next
             </button>
           </footer>
