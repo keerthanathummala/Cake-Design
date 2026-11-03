@@ -13,9 +13,17 @@ export default function DownloadPanel() {
     return () => clearTimeout(t)
   }, [select])
 
-  const download = () => {
+  const [note, setNote] = useState('')
+  const download = async () => {
     const url = exportPng()
-    if (url) downloadDataUrl(url, 'my-cake.png')
+    if (!url) return
+    setNote('')
+    try {
+      await downloadDataUrl(url, 'my-cake.png')
+    } catch (e) {
+      const code = (e as { code?: string })?.code
+      if (code !== 'declined') setNote("The download couldn't start here. Right-click or long-press the preview to save it.")
+    }
   }
 
   return (
@@ -26,6 +34,7 @@ export default function DownloadPanel() {
       <button className="btn primary wide" onClick={download}>
         Download PNG
       </button>
+      {note && <p className="error">{note}</p>}
       <p className="panel-hint small" style={{ marginTop: 10 }}>
         If the download doesn't start, right-click or long-press the preview and save the image.
       </p>

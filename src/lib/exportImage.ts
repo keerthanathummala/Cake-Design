@@ -13,7 +13,23 @@ export function exportPng(width = STAGE_W * 2): string | null {
   return url
 }
 
-export function downloadDataUrl(url: string, filename: string) {
+type Downloads = { save: (r: { filename: string; data: Blob }) => Promise<unknown> }
+type ClaudeHost = { use?: (name: string) => Promise<unknown> }
+
+/**
+ * Save a data URL as a file. Inside the Claude artifact viewer, plain download
+ * links are blocked, so the viewer's own save prompt is used there instead.
+ */
+export async function downloadDataUrl(url: string, filename: string): Promise<void> {
+  const host = (window as unknown as { claude?: ClaudeHost }).claude
+  if (host?.use) {
+    const downloads = (await host.use('downloads').catch(() => null)) as Downloads | null
+    if (downloads) {
+      const blob = await (await fetch(url)).blob()
+      await downloads.save({ filename, data: blob })
+      return
+    }
+  }
   const a = document.createElement('a')
   a.href = url
   a.download = filename
