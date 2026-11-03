@@ -30,7 +30,7 @@ import {
   type Material,
 } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { CANDLE_DEFAULT, type TopperKind } from '../lib/toppers'
+import { CANDLE_DEFAULT, GOLD_CANDLE, SPRINKLE_COLORS, type TopperKind } from '../lib/toppers'
 import { buildStrokes, spiralPath } from './pipeGeometry'
 import { candleTexture, crumbGray, leafTexture, orangeSliceTexture, strawberryFlesh, strawberrySkin } from './textures'
 
@@ -348,15 +348,18 @@ function OrangeHalf() {
 
 // ---------- flowers ----------
 
-function petalGeometry(width: number, height: number, cup: number, curl: number) {
-  const g = new PlaneGeometry(1, 1, 8, 10)
+function petalGeometry(width: number, height: number, cup: number, curl: number, round = false) {
+  const g = new PlaneGeometry(1, 1, round ? 12 : 8, round ? 14 : 10)
   g.translate(0, 0.5, 0)
   const p = g.attributes.position
   const colors: number[] = []
   for (let i = 0; i < p.count; i++) {
     const u = p.getX(i)
     const v = p.getY(i)
-    const w = Math.pow(Math.sin(Math.PI * (0.12 + 0.86 * v)), 0.7) * (1 - 0.1 * v)
+    // round: narrow at the base, widest high up, with a broad rounded top like a real rose petal
+    const w = round
+      ? Math.pow(Math.sin(Math.PI * (0.06 + 0.62 * v)), 0.55) * Math.sqrt(Math.max(0, 1 - Math.pow(Math.max(0, v - 0.8) / 0.2, 2) * 0.55))
+      : Math.pow(Math.sin(Math.PI * (0.12 + 0.86 * v)), 0.7) * (1 - 0.1 * v)
     const x = u * w * width
     const y = v * height
     const z = cup * Math.pow(u * 2, 2) * width * 0.35 - curl * Math.pow(v, 3) * height * 0.45
@@ -405,6 +408,57 @@ function Rose({ white }: { white?: boolean }) {
     <group position-y={0.02}>
       <mesh geometry={roseGeometry()} material={white ? whiteRose() : pinkRose()} castShadow />
       <mesh geometry={leafShapeGeometry(0.42, 0.22, 0.06, 0.05, 7)} material={greenLeaf()} rotation={[-Math.PI / 2 + 0.15, 0.6, 0]} position={[0.08, 0.02, 0.05]} />
+    </group>
+  )
+}
+
+/** A real garden rose head: deep velvety petals spiralling out from a tight bud, on green sepals. */
+const freshRoseGeometry = once(() => {
+  const parts: BufferGeometry[] = []
+  const N = 34
+  const r = rng(77)
+  for (let i = 0; i < N; i++) {
+    const k = i / (N - 1)
+    // inner petals stand tall and wrap the bud; outer ones open into a cup with rolled-back edges
+    const petal = petalGeometry(0.26 + 0.36 * k, 0.4 + 0.12 * k, 2.2 - 1.2 * k, 0.04 + 0.32 * Math.pow(k, 2), true)
+    petal.rotateZ((r() - 0.5) * 0.12)
+    petal.rotateX(-(0.05 + 0.75 * Math.pow(k, 1.4)))
+    petal.translate(0, 0.06 * (1 - k), -(0.015 + 0.2 * k))
+    petal.rotateY(i * 2.399 + (r() - 0.5) * 0.3)
+    parts.push(petal.toNonIndexed())
+  }
+  return mergeGeometries(parts, false)
+})
+const freshRoseSepals = once(() => {
+  const parts: BufferGeometry[] = []
+  for (let k = 0; k < 5; k++) {
+    const leaf = leafShapeGeometry(0.42, 0.09, 0.02, -0.18, k + 50)
+    leaf.rotateX(-Math.PI / 2 + 0.12)
+    leaf.rotateY((k / 5) * Math.PI * 2 + 0.3)
+    parts.push(leaf.toNonIndexed())
+  }
+  return mergeGeometries(parts, false)
+})
+const freshRoseMat = once(
+  () =>
+    new MeshPhysicalMaterial({
+      color: '#b3122e',
+      vertexColors: true,
+      roughness: 0.62,
+      side: DoubleSide,
+      sheen: 1,
+      sheenColor: new Color('#ff7d93'),
+      sheenRoughness: 0.35,
+    }),
+)
+
+function FreshRose() {
+  return (
+    <group position-y={0.03}>
+      <mesh geometry={freshRoseGeometry()} material={freshRoseMat()} castShadow />
+      <mesh geometry={freshRoseSepals()} material={greenLeaf()} position-y={-0.01} />
+      <mesh geometry={leafShapeGeometry(0.5, 0.26, 0.05, 0.06, 81)} material={greenLeaf()} rotation={[-Math.PI / 2 + 0.12, 0.9, 0]} position={[0.1, 0.0, 0.08]} />
+      <mesh geometry={leafShapeGeometry(0.44, 0.24, 0.05, 0.06, 82)} material={greenLeaf()} rotation={[-Math.PI / 2 + 0.12, -2.2, 0]} position={[-0.08, 0.0, -0.06]} />
     </group>
   )
 }
@@ -571,21 +625,31 @@ const candle = once(() => ({
   glow: new SpriteMaterial({ map: flameTexture(), transparent: true, depthWrite: false, blending: AdditiveBlending, toneMapped: false }),
 }))
 
-/** A thin candle that wiggles up and down like a piped squiggle. */
-const squiggle = once(() => {
+/** A tall, very thin candle with a gentle wave, like the metallic gold party candles. */
+const GOLD_H = 1
+const goldWave = once(() => {
   const pts: Vector3[] = []
-  for (let i = 0; i <= 80; i++) {
-    const t = i / 80
-    pts.push(new Vector3(Math.sin(t * Math.PI * 9) * 0.07, t * 1.05, Math.cos(t * Math.PI * 9) * 0.025))
+  for (let i = 0; i <= 120; i++) {
+    const t = i / 120
+    // the wave fades in above the base so it stands straight in the frosting
+    const amp = 0.022 * Math.min(1, t * 6)
+    pts.push(new Vector3(Math.sin(t * Math.PI * 12) * amp, t * GOLD_H, 0))
   }
-  const tube = new TubeGeometry(new CatmullRomCurve3(pts), 160, 0.04, 12)
-  // tube uvs run along the length on u; swap so stripes wrap around it
-  const uv = tube.attributes.uv
-  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getY(i), uv.getX(i) * 3)
-  const cap = new SphereGeometry(0.04, 12, 8)
-  cap.translate(pts[80].x, pts[80].y, pts[80].z)
-  return { tube, cap, top: pts[80] }
+  const tube = new TubeGeometry(new CatmullRomCurve3(pts), 240, 0.019, 10)
+  const cap = new SphereGeometry(0.019, 10, 6)
+  const top = pts[pts.length - 1]
+  cap.translate(top.x, top.y, top.z)
+  return { geo: mergeGeometries([tube.toNonIndexed(), cap.toNonIndexed()], false), top }
 })
+const goldMats = new Map<string, MeshPhysicalMaterial>()
+function goldMat(color: string) {
+  let m = goldMats.get(color)
+  if (!m) {
+    m = new MeshPhysicalMaterial({ color, metalness: 1, roughness: 0.22, clearcoat: 0.4, clearcoatRoughness: 0.15 })
+    goldMats.set(color, m)
+  }
+  return m
+}
 
 const candleMats = new Map<string, MeshPhysicalMaterial>()
 function candleMat(a: string, b: string, pattern: string) {
@@ -634,14 +698,12 @@ function Candle({ look }: { look: CandleLook }) {
   )
 }
 
-function SquigglyCandle({ look }: { look: CandleLook }) {
-  const g = squiggle()
-  const m = candleMat(look.color ?? '#bfe3f2', look.color2 ?? '#ffffff', look.pattern ?? 'stripes')
+function GoldCandle({ look }: { look: CandleLook }) {
+  const g = goldWave()
   return (
     <group>
-      <mesh geometry={g.tube} material={m} castShadow />
-      <mesh geometry={g.cap} material={m} />
-      <Flame y={g.top.y + 0.08} x={g.top.x} z={g.top.z} />
+      <mesh geometry={g.geo} material={goldMat(look.color ?? GOLD_CANDLE)} castShadow />
+      <Flame y={g.top.y + 0.06} x={g.top.x} z={g.top.z} />
     </group>
   )
 }
@@ -687,7 +749,6 @@ function Pearls() {
   return <mesh geometry={p.g} material={p.mat} castShadow />
 }
 
-const SPRINKLE_COLORS = ['#f06e9a', '#ffd34d', '#5fc0e6', '#8fd17e', '#b48af2', '#ffffff']
 const sprinkles = once(() => {
   const r = rng(9)
   return SPRINKLE_COLORS.map((color, ci) => {
@@ -715,6 +776,21 @@ function Sprinkles() {
   )
 }
 
+/** One jimmy, lying on the frosting. */
+const oneSprinkle = once(() => {
+  const g = new CapsuleGeometry(0.2, 0.6, 4, 10)
+  g.rotateZ(Math.PI / 2)
+  g.translate(0, 0.18, 0)
+  return g
+})
+const sprinkleMats = new Map<string, MeshPhysicalMaterial>()
+function Sprinkle({ look }: { look: CandleLook }) {
+  const color = look.color ?? SPRINKLE_COLORS[0]
+  let m = sprinkleMats.get(color)
+  if (!m) sprinkleMats.set(color, (m = new MeshPhysicalMaterial({ color, roughness: 0.35, clearcoat: 0.6 })))
+  return <mesh geometry={oneSprinkle()} material={m} castShadow />
+}
+
 export function TopperModel({ kind, look = {} }: { kind: TopperKind | string; look?: CandleLook }) {
   switch (kind) {
     case 'strawberry-slice':
@@ -723,8 +799,13 @@ export function TopperModel({ kind, look = {} }: { kind: TopperKind | string; lo
       return <CherryHalf />
     case 'orange-half':
       return <OrangeHalf />
-    case 'candle-squiggle':
-      return <SquigglyCandle look={look} />
+    case 'candle-gold':
+    case 'candle-squiggle': // older saved cakes
+      return <GoldCandle look={look} />
+    case 'sprinkle':
+      return <Sprinkle look={look} />
+    case 'rose-real':
+      return <FreshRose />
     case 'strawberry-half':
       return <StrawberryHalf />
     case 'strawberry':

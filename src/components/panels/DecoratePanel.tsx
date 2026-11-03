@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { cssFamily, FONTS } from '../../lib/fonts'
 import { useThumbs } from '../../lib/thumbs'
-import { CANDLE_PATTERNS, isCandle, TOPPER_GROUPS, TOPPERS } from '../../lib/toppers'
+import { CANDLE_PATTERNS, colorChoices, isCandle, TOPPER_GROUPS, TOPPERS } from '../../lib/toppers'
 import { newId, SLICE_NEXT, useStore } from '../../store'
 import Swatches from '../Swatches'
 
@@ -110,6 +110,12 @@ function SelectedControls() {
               <Swatches colors={WAX} value={topper.color2 ?? ''} onPick={(c) => s.updateTopper(topper.id, { color2: c }, 'wax2' + topper.id)} />
             </>
           )}
+        </>
+      )}
+      {topper && colorChoices(topper.kind) && (
+        <>
+          <h3 className="section-label">Color</h3>
+          <Swatches colors={colorChoices(topper.kind)!} value={topper.color ?? ''} onPick={(c) => s.updateTopper(topper.id, { color: c }, 'tcolor' + topper.id)} />
         </>
       )}
       <p className="panel-hint small">Drag it to move it anywhere on the cake, top or sides.</p>

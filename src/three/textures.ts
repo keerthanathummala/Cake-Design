@@ -427,7 +427,7 @@ export function pressedFlowersTexture(base: string): Texture {
 }
 
 /** Text drawn for a message plaque or piped writing. */
-export function messageTexture(text: string, font: string, color: string): { tex: Texture; aspect: number } {
+export function messageTexture(text: string, font: string, color: string): { tex: Texture; bump: Texture; aspect: number } {
   const f = fontOf(font)
   const family = `"${f.family}", cursive`
   const size = 120
@@ -436,32 +436,69 @@ export function messageTexture(text: string, font: string, color: string): { tex
   const lines = text.split('\n').slice(0, 3)
   const w = Math.max(...lines.map((l) => probe.measureText(l).width), 10) + 60
   const h = lines.length * size * 1.2 + 50
-  const c = document.createElement('canvas')
-  c.width = Math.ceil(w)
-  c.height = Math.ceil(h)
-  const ctx = c.getContext('2d')!
-  ctx.font = probe.font
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  // A slightly darker outline and a soft highlight make it read like piped icing.
-  lines.forEach((l, i) => {
-    const y = 25 + size * 1.2 * (i + 0.5)
+  const canvas = () => {
+    const c = document.createElement('canvas')
+    c.width = Math.ceil(w)
+    c.height = Math.ceil(h)
+    const ctx = c.getContext('2d')!
+    ctx.font = probe.font
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
     ctx.lineJoin = 'round'
-    ctx.lineWidth = 7
-    ctx.strokeStyle = shade(color, -0.25)
-    ctx.strokeText(l, c.width / 2, y)
+    return { c, ctx }
+  }
+  const ys = lines.map((_, i) => 25 + size * 1.2 * (i + 0.5))
+
+  // Color: soft buttercream. A faint darker edge where the bead meets the cake,
+  // gentle light from above, and fine grain so it reads as icing, not plastic.
+  const { c, ctx } = canvas()
+  const x = c.width / 2
+  lines.forEach((l, i) => {
+    ctx.lineWidth = 4
+    ctx.strokeStyle = shade(color, -0.12)
+    ctx.strokeText(l, x, ys[i])
     ctx.fillStyle = color
-    ctx.fillText(l, c.width / 2, y)
-    ctx.globalAlpha = 0.25
-    ctx.fillStyle = '#ffffff'
-    ctx.fillText(l, c.width / 2 - 2, y - 3)
-    ctx.globalAlpha = 1
-    ctx.fillStyle = color
-    ctx.fillText(l, c.width / 2, y + 1)
+    ctx.fillText(l, x, ys[i])
   })
+  ctx.globalCompositeOperation = 'source-atop'
+  ys.forEach((_, i) => {
+    const g = ctx.createLinearGradient(0, ys[i] - size / 2, 0, ys[i] + size / 2)
+    g.addColorStop(0, 'rgba(255,255,255,0.12)')
+    g.addColorStop(0.55, 'rgba(255,255,255,0)')
+    g.addColorStop(1, 'rgba(0,0,0,0.1)')
+    ctx.fillStyle = g
+    ctx.fillRect(0, ys[i] - size / 2, c.width, size)
+  })
+  const grain = rng(text.length * 131 + 7)
+  for (let n = 0; n < (c.width * c.height) / 40; n++) {
+    ctx.fillStyle = grain() > 0.5 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'
+    ctx.fillRect(grain() * c.width, grain() * c.height, 1.5, 1.5)
+  }
+  ctx.globalCompositeOperation = 'source-over'
+
+  // Height: blurred letters give each stroke a rounded piped bead, with a little grain.
+  const b = canvas()
+  b.ctx.fillStyle = '#000000'
+  b.ctx.fillRect(0, 0, b.c.width, b.c.height)
+  b.ctx.filter = 'blur(4px)'
+  b.ctx.fillStyle = '#ffffff'
+  b.ctx.strokeStyle = '#ffffff'
+  b.ctx.lineWidth = 4
+  lines.forEach((l, i) => {
+    b.ctx.strokeText(l, x, ys[i])
+    b.ctx.fillText(l, x, ys[i])
+  })
+  b.ctx.filter = 'none'
+  b.ctx.globalCompositeOperation = 'source-atop'
+  for (let n = 0; n < (c.width * c.height) / 30; n++) {
+    b.ctx.fillStyle = grain() > 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
+    b.ctx.fillRect(grain() * c.width, grain() * c.height, 3, 3)
+  }
+
   const tex = new CanvasTexture(c)
   tex.colorSpace = SRGBColorSpace
-  return { tex, aspect: c.width / c.height }
+  const bump = new CanvasTexture(b.c)
+  return { tex, bump, aspect: c.width / c.height }
 }
 
 /** Light grey crumb used under a tint, so sponge color changes are instant. */

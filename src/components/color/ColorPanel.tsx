@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CANDLE_DEFAULT, isCandle } from '../../lib/toppers'
+import { CANDLE_DEFAULT, colorChoices, isCandle } from '../../lib/toppers'
 import { editedStyle, FLAVORS, spongeColorOf, useStore } from '../../store'
 import ColorWheel from './ColorWheel'
 import ImageColorPicker from './ImageColorPicker'
@@ -34,12 +34,14 @@ function useTargets(): Target[] {
     const t = s.toppers.find((x) => x.id === s.selectedId)
     const d = s.decals.find((x) => x.id === s.selectedId)
     if (t && isCandle(t.kind)) {
-      const base = t.kind === 'candle' ? CANDLE_DEFAULT : { color: '#bfe3f2', color2: '#ffffff' }
       return [
-        { id: 'wax', label: 'Candle', value: t.color ?? base.color, set: (c) => s.updateTopper(t.id, { color: c }, 'wax' + t.id) },
-        { id: 'wax2', label: 'Pattern', value: t.color2 ?? base.color2, set: (c) => s.updateTopper(t.id, { color2: c }, 'wax2' + t.id) },
+        { id: 'wax', label: 'Candle', value: t.color ?? CANDLE_DEFAULT.color, set: (c) => s.updateTopper(t.id, { color: c }, 'wax' + t.id) },
+        { id: 'wax2', label: 'Pattern', value: t.color2 ?? CANDLE_DEFAULT.color2, set: (c) => s.updateTopper(t.id, { color2: c }, 'wax2' + t.id) },
       ]
     }
+    const choices = t && colorChoices(t.kind)
+    if (t && choices)
+      return [{ id: 'topper', label: t.kind === 'sprinkle' ? 'Sprinkle' : 'Candle', value: t.color ?? choices[0], set: (c) => s.updateTopper(t.id, { color: c }, 'tcolor' + t.id) }]
     if (d?.isMessage) return [{ id: 'message', label: 'Message', value: d.color ?? s.message.color, set: (c) => s.updateDecal(d.id, { color: c }, 'msgcolor' + d.id) }]
     return [{ id: 'message', label: 'Message', value: s.message.color, set: (c) => s.set({ message: { ...s.message, color: c } }, 'msgcolor') }]
   }
