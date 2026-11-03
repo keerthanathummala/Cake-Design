@@ -7,6 +7,9 @@ import { useStore } from '../store'
 import Cake from './cake/Cake'
 import Stand from './cake/Stand'
 import TierOutlines from './cake/TierOutlines'
+import StickerLayer from './StickerLayer'
+import StickerToolbar from './StickerToolbar'
+import { addStickerAt, DRAG_MIME } from '../lib/addSticker'
 
 /** The drawing area: background, stand, cake and stickers, scaled to fit. */
 export default function CakeStage() {
@@ -39,7 +42,34 @@ export default function CakeStage() {
 
   return (
     <div className="stage-wrap" ref={wrapRef}>
-      <div className="stage-center" style={{ width: STAGE_W * scale, height: STAGE_H * scale }}>
+      <StickerToolbar />
+      <div
+        className="stage-center"
+        style={{ width: STAGE_W * scale, height: STAGE_H * scale }}
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes(DRAG_MIME)) {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = 'copy'
+          }
+        }}
+        onDrop={(e) => {
+          const src = e.dataTransfer.getData(DRAG_MIME)
+          const stage = konvaRef.current
+          if (!src || !stage) return
+          e.preventDefault()
+          stage.setPointersPositions(e)
+          const p = stage.getPointerPosition()
+          if (p) addStickerAt(src, { x: p.x / scale, y: p.y / scale })
+        }}
+        onWheel={(e) => {
+          // Mouse wheel over the stage resizes the selected sticker.
+          const st = useStore.getState()
+          const s = st.step === 'stickers' && st.stickers.find((x) => x.id === st.selectedId)
+          if (!s || e.ctrlKey) return
+          const next = Math.max(0.2, Math.min(4, s.scale * (e.deltaY < 0 ? 1.08 : 1 / 1.08)))
+          st.updateSticker(s.id, { scale: next })
+        }}
+      >
         <Stage
           ref={konvaRef}
           width={STAGE_W * scale}
@@ -60,6 +90,7 @@ export default function CakeStage() {
             {!flavor && <TierOutlines tiers={tiers} />}
             <Cake />
           </Layer>
+          <StickerLayer />
         </Stage>
       </div>
     </div>

@@ -5,6 +5,7 @@ import StepBar from './components/StepBar'
 import ColorPanel from './components/color/ColorPanel'
 import FlavorPanel from './components/panels/FlavorPanel'
 import FrostingPanel from './components/panels/FrostingPanel'
+import StickerPanel from './components/panels/StickerPanel'
 import TierPanel from './components/panels/TierPanel'
 import { STEPS, useStore } from './store'
 
@@ -48,6 +49,7 @@ export default function App() {
           {step === 'tiers' && <TierPanel />}
           {step === 'flavor' && <FlavorPanel />}
           {step === 'frosting' && <FrostingPanel />}
+          {step === 'stickers' && <StickerPanel />}
         </aside>
 
         <section className="stage-area">
