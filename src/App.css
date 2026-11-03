@@ -533,3 +533,25 @@
   width: 100%;
   padding: 11px;
 }
+
+.bottom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 6px;
+}
+
+.zoom-pct {
+  min-width: 52px;
+  padding: 4px 6px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import './App.css'
 import CakeStage from './components/CakeStage'
+import BottomControls from './components/BottomControls'
 import StepBar from './components/StepBar'
 import ColorPanel from './components/color/ColorPanel'
 import BackgroundPanel from './components/panels/BackgroundPanel'
@@ -59,6 +60,7 @@ export default function App() {
         <section className="stage-area">
           <CakeStage />
           <footer className="bottombar">
+            <BottomControls />
             <div className="spacer" />
             <button className="btn" disabled={idx === 0} onClick={() => setStep(STEPS[idx - 1].id)}>
               Back

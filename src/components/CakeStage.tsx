@@ -64,8 +64,14 @@ export default function CakeStage() {
         onWheel={(e) => {
           // Mouse wheel over the stage resizes the selected sticker.
           const st = useStore.getState()
+          if (e.ctrlKey || e.metaKey) {
+            // Ctrl + wheel zooms the whole view.
+            e.preventDefault()
+            st.setZoom(st.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1))
+            return
+          }
           const s = st.step === 'stickers' && st.stickers.find((x) => x.id === st.selectedId)
-          if (!s || e.ctrlKey) return
+          if (!s) return
           const next = Math.max(0.2, Math.min(4, s.scale * (e.deltaY < 0 ? 1.08 : 1 / 1.08)))
           st.updateSticker(s.id, { scale: next })
         }}
