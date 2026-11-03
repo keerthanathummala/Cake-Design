@@ -5,7 +5,10 @@ import { mix } from '../../lib/color'
 import { CX, PLATE_Y, TIER_H } from '../../lib/geometry'
 import { useAnimatedColor } from '../../hooks/useAnimatedColor'
 import { FLAVORS, spongeColorOf, useStore } from '../../store'
+import { dollops, tierProgress } from '../../lib/frosting'
+import { usePipingProgress } from '../../hooks/usePipingProgress'
 import Frosting from './Frosting'
+import PipingBag from './PipingBag'
 import Tier, { bounceOut } from './Tier'
 
 type Crumb = { id: number; x: number; y: number; vx: number; vy: number; r: number }
@@ -22,6 +25,10 @@ export default function Cake() {
   const hadCake = useRef(false)
   const prevTiers = useRef(tiers)
   const [crumbs, setCrumbs] = useState<Crumb[]>([])
+  const style = useStore((s) => s.frostingStyle)
+  const pipingRun = useStore((s) => s.pipingRun)
+  const frosting = useAnimatedColor(useStore((s) => s.frostingColor), 250)
+  const progress = usePipingProgress(pipingRun, 1300 * tiers)
 
   const color = useAnimatedColor(sponge, 400)
   const filling = useAnimatedColor(flavor ? FLAVORS[flavor].filling : '#ffffff', 400)
@@ -65,9 +72,10 @@ export default function Cake() {
       <Group ref={groupRef} x={CX} offsetX={CX} y={0}>
         {Array.from({ length: tiers }, (_, i) => (
           <Tier key={i} index={i} color={color} filling={filling} dropIn={i >= dropFrom}>
-            <Frosting index={i} />
+            <Frosting index={i} style={style} color={frosting} progress={tierProgress(progress, i, tiers)} />
           </Tier>
         ))}
+        {style && progress < 1 && <Bag progress={progress} tiers={tiers} style={style} color={frosting} />}
       </Group>
       {crumbs.map((c) => (
         <CrumbDot key={c.id} c={c} color={mix(color, '#000000', 0.1)} />
@@ -123,4 +131,15 @@ function CrumbDot({ c, color }: { c: Crumb; color: string }) {
     return () => anim?.destroy?.()
   }, [c])
   return <Circle ref={ref} x={c.x} y={c.y} radius={c.r} fill={color} listening={false} />
+}
+
+/** The piping bag follows the dollop currently being piped. */
+function Bag({ progress, tiers, style, color }: { progress: number; tiers: number; style: 'swirl' | 'twist'; color: string }) {
+  const active = Math.max(0, Math.min(tiers - 1, Math.floor(progress * tiers)))
+  const local = tierProgress(progress, active, tiers)
+  const pts = dollops(active, style)
+  const pipe = Math.max(0, (local - 0.2) / 0.8)
+  const d = pts[Math.max(0, Math.min(pts.length - 1, Math.floor(pts.length * pipe)))]
+  if (!d) return null
+  return <PipingBag x={d.x} y={d.y - 4} color={color} />
 }

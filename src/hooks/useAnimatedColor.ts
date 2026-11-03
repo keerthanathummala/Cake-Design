@@ -13,7 +13,7 @@ export function useAnimatedColor(target: string, duration = 400): string {
     const start = performance.now()
     let raf = 0
     const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / duration)
+      const t = Math.max(0, Math.min(1, (now - start) / duration))
       const eased = 1 - Math.pow(1 - t, 3)
       const c = t >= 1 ? target : mix(fromRef.current, target, eased)
       shownRef.current = c

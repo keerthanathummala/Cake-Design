@@ -226,3 +226,35 @@
   height: 40px;
   border-radius: 10px;
 }
+
+.section-label {
+  margin: 18px 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.swatch-btn {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.12);
+  transition: transform 0.12s;
+}
+
+.swatch-btn:hover {
+  transform: scale(1.1);
+}
+
+.swatch-btn.on {
+  outline: 2.5px solid var(--accent);
+  outline-offset: 2px;
+}
