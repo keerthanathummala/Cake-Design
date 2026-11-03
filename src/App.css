@@ -509,3 +509,27 @@
 .btn.danger {
   color: #c62f3e;
 }
+
+.preview {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  margin-bottom: 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.btn.wide {
+  width: 100%;
+  padding: 11px;
+}

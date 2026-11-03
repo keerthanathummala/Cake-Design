@@ -3,6 +3,8 @@ import './App.css'
 import CakeStage from './components/CakeStage'
 import StepBar from './components/StepBar'
 import ColorPanel from './components/color/ColorPanel'
+import BackgroundPanel from './components/panels/BackgroundPanel'
+import DownloadPanel from './components/panels/DownloadPanel'
 import FlavorPanel from './components/panels/FlavorPanel'
 import FrostingPanel from './components/panels/FrostingPanel'
 import StickerPanel from './components/panels/StickerPanel'
@@ -50,6 +52,8 @@ export default function App() {
           {step === 'flavor' && <FlavorPanel />}
           {step === 'frosting' && <FrostingPanel />}
           {step === 'stickers' && <StickerPanel />}
+          {step === 'background' && <BackgroundPanel />}
+          {step === 'download' && <DownloadPanel />}
         </aside>
 
         <section className="stage-area">
