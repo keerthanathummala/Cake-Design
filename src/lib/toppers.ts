@@ -16,6 +16,10 @@ export type TopperKind =
   | 'truffle'
   | 'shard'
   | 'candle'
+  | 'candle-squiggle'
+  | 'strawberry-slice'
+  | 'cherry-half'
+  | 'orange-half'
   | 'goldleaf'
   | 'pearls'
   | 'sprinkles'
@@ -25,6 +29,9 @@ export type TopperInfo = { id: TopperKind; label: string; group: string; /** wor
 export const TOPPERS: TopperInfo[] = [
   { id: 'strawberry-half', label: 'Sliced strawberry', group: 'Fruit', size: 0.27 },
   { id: 'strawberry', label: 'Strawberry', group: 'Fruit', size: 0.25 },
+  { id: 'strawberry-slice', label: 'Strawberry slice', group: 'Fruit', size: 0.27 },
+  { id: 'cherry-half', label: 'Halved cherry', group: 'Fruit', size: 0.15 },
+  { id: 'orange-half', label: 'Half orange slice', group: 'Fruit', size: 0.34 },
   { id: 'blueberry', label: 'Blueberry', group: 'Fruit', size: 0.1 },
   { id: 'raspberry', label: 'Raspberry', group: 'Fruit', size: 0.14 },
   { id: 'cherry', label: 'Cherry', group: 'Fruit', size: 0.15 },
@@ -39,6 +46,7 @@ export const TOPPERS: TopperInfo[] = [
   { id: 'truffle', label: 'Truffle', group: 'Sweets', size: 0.16 },
   { id: 'shard', label: 'Chocolate shard', group: 'Sweets', size: 0.38 },
   { id: 'candle', label: 'Candle', group: 'Party', size: 0.46 },
+  { id: 'candle-squiggle', label: 'Squiggly candle', group: 'Party', size: 0.5 },
   { id: 'goldleaf', label: 'Gold leaf', group: 'Party', size: 0.26 },
   { id: 'pearls', label: 'Sugar pearls', group: 'Party', size: 0.16 },
   { id: 'sprinkles', label: 'Sprinkles', group: 'Party', size: 0.4 },
@@ -47,3 +55,16 @@ export const TOPPERS: TopperInfo[] = [
 export const TOPPER_GROUPS = ['Fruit', 'Flowers', 'Sweets', 'Party']
 
 export const topperInfo = (kind: string) => TOPPERS.find((t) => t.id === kind) ?? TOPPERS[0]
+
+/** Toppers whose wax color and pattern can be changed. */
+export const isCandle = (kind: string) => kind === 'candle' || kind === 'candle-squiggle'
+
+export const CANDLE_PATTERNS = [
+  { id: 'stripes', label: 'Stripes' },
+  { id: 'dots', label: 'Polka dots' },
+  { id: 'rings', label: 'Rings' },
+  { id: 'glitter', label: 'Glitter' },
+  { id: 'solid', label: 'Plain' },
+]
+
+export const CANDLE_DEFAULT = { color: '#fbeef2', color2: '#e8738f', pattern: 'stripes' }

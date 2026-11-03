@@ -20,6 +20,8 @@ import {
   ShapeGeometry,
   SphereGeometry,
   SplineCurve,
+  CircleGeometry,
+  SRGBColorSpace,
   SpriteMaterial,
   TubeGeometry,
   Vector2,
@@ -28,7 +30,7 @@ import {
   type Material,
 } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import type { TopperKind } from '../lib/toppers'
+import { CANDLE_DEFAULT, type TopperKind } from '../lib/toppers'
 import { buildStrokes, spiralPath } from './pipeGeometry'
 import { candleTexture, crumbGray, leafTexture, orangeSliceTexture, strawberryFlesh, strawberrySkin } from './textures'
 
@@ -260,6 +262,90 @@ function Orange() {
   return <mesh geometry={o.geo} material={o.mats} position-y={0.38} rotation-x={1.15} castShadow />
 }
 
+
+/** Thin lengthwise slice of strawberry: flesh on both faces, skin round the edge. */
+const berrySlice = once(() => {
+  const pts = berryProfile().slice(0, -1)
+  const outline = [...pts.map((p) => new Vector2(p.x, p.y)), ...[...pts].reverse().slice(0, -1).map((p) => new Vector2(-p.x * 0.92, p.y))]
+  const g = new ExtrudeGeometry(new Shape(outline), { depth: 0.07, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.012, bevelSegments: 2, curveSegments: 4 })
+  const pos = g.attributes.position
+  const uv = g.attributes.uv
+  for (let i = 0; i < pos.count; i++) uv.setXY(i, 0.5 + pos.getX(i) / (2 * BERRY_W), pos.getY(i))
+  return g
+})
+
+function StrawberrySlice() {
+  const m = berryMats()
+  // groups: 0 = faces (flesh), 1 = edge (skin); lying flat, tip pointing +x
+  return (
+    <group position={[-0.5, 0.02, 0]} rotation={[-Math.PI / 2, 0, -Math.PI / 2]}>
+      <mesh geometry={berrySlice()} material={[m.flesh, m.skin]} castShadow />
+    </group>
+  )
+}
+
+const cherryHalf = once(() => {
+  const body = new SphereGeometry(0.45, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2)
+  const c = document.createElement('canvas')
+  c.width = c.height = 256
+  const ctx = c.getContext('2d')!
+  const g = ctx.createRadialGradient(128, 128, 20, 128, 128, 128)
+  g.addColorStop(0, '#d23a4f')
+  g.addColorStop(0.7, '#9c0f24')
+  g.addColorStop(0.95, '#5e0614')
+  g.addColorStop(1, '#3d030c')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, 256, 256)
+  // the stone's hollow
+  ctx.fillStyle = '#e8c9a0'
+  ctx.beginPath()
+  ctx.ellipse(128, 128, 30, 38, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = 'rgba(80,20,10,0.5)'
+  ctx.beginPath()
+  ctx.ellipse(132, 132, 22, 30, 0, 0, Math.PI * 2)
+  ctx.fill()
+  const tex = new CanvasTexture(c)
+  tex.colorSpace = SRGBColorSpace
+  const face = new CircleGeometry(0.45, 40)
+  face.rotateX(-Math.PI / 2)
+  return {
+    body,
+    face,
+    faceMat: new MeshPhysicalMaterial({ map: tex, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.08 }),
+  }
+})
+
+function CherryHalf() {
+  const c = cherry()
+  const h = cherryHalf()
+  // dome down, glossy cut face up
+  return (
+    <group position-y={0.42} rotation-x={Math.PI}>
+      <mesh geometry={h.body} material={c.mat} castShadow />
+      <mesh geometry={h.face} material={h.faceMat} rotation-x={Math.PI} />
+    </group>
+  )
+}
+
+const orangeHalf = once(() => {
+  const geo = new CylinderGeometry(0.5, 0.5, 0.05, 48, 1, false, 0, Math.PI)
+  const cut = new PlaneGeometry(1, 0.05)
+  cut.rotateY(Math.PI / 2)
+  return { geo, cut }
+})
+
+function OrangeHalf() {
+  const o = orange()
+  const h = orangeHalf()
+  return (
+    <group position-y={0.03}>
+      <mesh geometry={h.geo} material={o.mats} castShadow />
+      <mesh geometry={h.cut} material={o.mats[1]} />
+    </group>
+  )
+}
+
 // ---------- flowers ----------
 
 function petalGeometry(width: number, height: number, cup: number, curl: number) {
@@ -477,7 +563,6 @@ const flameTexture = once(() => {
 
 const candle = once(() => ({
   body: new CylinderGeometry(0.07, 0.07, 1.1, 24),
-  mat: new MeshPhysicalMaterial({ map: candleTexture('#fbeef2', '#e8738f'), roughness: 0.4, clearcoat: 0.3 }),
   wick: new CylinderGeometry(0.012, 0.012, 0.1, 6),
   wickMat: new MeshPhysicalMaterial({ color: '#222', roughness: 1 }),
   flame: new SphereGeometry(1, 16, 12),
@@ -486,26 +571,77 @@ const candle = once(() => ({
   glow: new SpriteMaterial({ map: flameTexture(), transparent: true, depthWrite: false, blending: AdditiveBlending, toneMapped: false }),
 }))
 
-function Candle() {
+/** A thin candle that wiggles up and down like a piped squiggle. */
+const squiggle = once(() => {
+  const pts: Vector3[] = []
+  for (let i = 0; i <= 80; i++) {
+    const t = i / 80
+    pts.push(new Vector3(Math.sin(t * Math.PI * 9) * 0.07, t * 1.05, Math.cos(t * Math.PI * 9) * 0.025))
+  }
+  const tube = new TubeGeometry(new CatmullRomCurve3(pts), 160, 0.04, 12)
+  // tube uvs run along the length on u; swap so stripes wrap around it
+  const uv = tube.attributes.uv
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getY(i), uv.getX(i) * 3)
+  const cap = new SphereGeometry(0.04, 12, 8)
+  cap.translate(pts[80].x, pts[80].y, pts[80].z)
+  return { tube, cap, top: pts[80] }
+})
+
+const candleMats = new Map<string, MeshPhysicalMaterial>()
+function candleMat(a: string, b: string, pattern: string) {
+  const key = `${a}-${b}-${pattern}`
+  let m = candleMats.get(key)
+  if (!m) {
+    m = new MeshPhysicalMaterial({ map: candleTexture(a, b, pattern), roughness: 0.38, clearcoat: 0.35, metalness: pattern === 'glitter' ? 0.3 : 0 })
+    candleMats.set(key, m)
+  }
+  return m
+}
+
+export type CandleLook = { color?: string; color2?: string; pattern?: string }
+
+function Flame({ y, x = 0, z = 0 }: { y: number; x?: number; z?: number }) {
   const c = candle()
   const flame = useRef<Group>(null)
   useFrame(({ clock }) => {
     const f = flame.current
     if (!f) return
-    const t = clock.elapsedTime
+    const t = clock.elapsedTime + x * 10
     const s = 1 + Math.sin(t * 17) * 0.06 + Math.sin(t * 29) * 0.04
     f.scale.set(1 / s, s, 1 / s)
     f.rotation.z = Math.sin(t * 7) * 0.06
   })
   return (
-    <group>
-      <mesh geometry={c.body} material={c.mat} position-y={0.5} castShadow />
-      <mesh geometry={c.wick} material={c.wickMat} position-y={1.09} />
-      <group ref={flame} position-y={1.13}>
+    <group position={[x, y, z]}>
+      <mesh geometry={c.wick} material={c.wickMat} position-y={-0.04} />
+      <group ref={flame}>
         <mesh geometry={c.flame} material={c.outer} position-y={0.1} scale={[0.065, 0.15, 0.065]} />
         <mesh geometry={c.flame} material={c.inner} position-y={0.07} scale={[0.035, 0.08, 0.035]} />
         <sprite material={c.glow} position-y={0.1} scale={0.6} />
       </group>
+    </group>
+  )
+}
+
+function Candle({ look }: { look: CandleLook }) {
+  const c = candle()
+  const m = candleMat(look.color ?? CANDLE_DEFAULT.color, look.color2 ?? CANDLE_DEFAULT.color2, look.pattern ?? CANDLE_DEFAULT.pattern)
+  return (
+    <group>
+      <mesh geometry={c.body} material={m} position-y={0.5} castShadow />
+      <Flame y={1.13} />
+    </group>
+  )
+}
+
+function SquigglyCandle({ look }: { look: CandleLook }) {
+  const g = squiggle()
+  const m = candleMat(look.color ?? '#bfe3f2', look.color2 ?? '#ffffff', look.pattern ?? 'stripes')
+  return (
+    <group>
+      <mesh geometry={g.tube} material={m} castShadow />
+      <mesh geometry={g.cap} material={m} />
+      <Flame y={g.top.y + 0.08} x={g.top.x} z={g.top.z} />
     </group>
   )
 }
@@ -579,8 +715,16 @@ function Sprinkles() {
   )
 }
 
-export function TopperModel({ kind }: { kind: TopperKind | string }) {
+export function TopperModel({ kind, look = {} }: { kind: TopperKind | string; look?: CandleLook }) {
   switch (kind) {
+    case 'strawberry-slice':
+      return <StrawberrySlice />
+    case 'cherry-half':
+      return <CherryHalf />
+    case 'orange-half':
+      return <OrangeHalf />
+    case 'candle-squiggle':
+      return <SquigglyCandle look={look} />
     case 'strawberry-half':
       return <StrawberryHalf />
     case 'strawberry':
@@ -612,7 +756,7 @@ export function TopperModel({ kind }: { kind: TopperKind | string }) {
     case 'shard':
       return <Shard />
     case 'candle':
-      return <Candle />
+      return <Candle look={look} />
     case 'goldleaf':
       return <GoldLeaf />
     case 'pearls':
