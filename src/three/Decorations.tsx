@@ -335,18 +335,18 @@ function DecalItem({ d, selected }: { d: Decal; selected: boolean }) {
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -4,
-        // messages are glossy piping gel: smooth, wet clear coat over raised letters
-        roughness: d.isMessage ? 0.14 : 0.5,
-        clearcoat: d.isMessage ? 1 : 0.1,
-        clearcoatRoughness: d.isMessage ? 0.04 : 0.3,
-        specularIntensity: d.isMessage ? 1 : 0.5,
+        // messages are piped buttercream: soft satin sheen over raised, rounded letters
+        roughness: d.isMessage ? 0.62 : 0.5,
+        clearcoat: d.isMessage ? 0.08 : 0.1,
+        clearcoatRoughness: 0.5,
+        specularIntensity: 0.5,
       }),
     [d.isMessage],
   )
   useEffect(() => {
     mat.map = tex ?? null
     mat.bumpMap = d.isMessage ? (message?.bump ?? null) : null
-    mat.bumpScale = 4
+    mat.bumpScale = 3
     // a little self-light so printed pictures keep their colors in shadow
     mat.emissiveMap = d.isMessage ? null : (tex ?? null)
     mat.emissive.set(d.isMessage ? '#000000' : '#ffffff')
