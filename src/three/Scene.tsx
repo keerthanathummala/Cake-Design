@@ -27,11 +27,25 @@ function Controls() {
   const base = useStore((s) => s.base)
   const autoSpin = useStore((s) => s.autoSpin)
   const dragging = useStore((s) => s.dragging)
-  const goal = new Vector3(0, cakeTop(tiers, base) * 0.55, 0)
-  useFrame(() => {
+  const top = cakeTop(tiers, base)
+  const goal = new Vector3(0, top * 0.55, 0)
+  // When the cake grows or shrinks, ease the camera back so it all fits.
+  const fit = useRef(0)
+  useEffect(() => {
+    fit.current = 60
+  }, [tiers, base])
+  useFrame(({ camera }) => {
     const c = ref.current
     if (!c) return
+    bridge.controls = c
     c.target.lerp(goal, 0.08)
+    if (fit.current > 0) {
+      fit.current--
+      const want = Math.max(5.6, top * 2.5 + 1.6)
+      const off = camera.position.clone().sub(c.target)
+      off.setLength(off.length() + (want - off.length()) * 0.08)
+      camera.position.copy(c.target).add(off)
+    }
     bridge.target = [c.target.x, c.target.y, c.target.z]
   })
   return (

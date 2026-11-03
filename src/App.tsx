@@ -1,16 +1,17 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import './App.css'
 import BottomControls from './components/BottomControls'
 import ColorPanel from './components/color/ColorPanel'
 import BackgroundPanel from './components/panels/BackgroundPanel'
+import DecoratePanel from './components/panels/DecoratePanel'
 import DownloadPanel from './components/panels/DownloadPanel'
 import FlavorPanel from './components/panels/FlavorPanel'
 import FrostingPanel from './components/panels/FrostingPanel'
 import ShapePanel from './components/panels/ShapePanel'
 import StepBar from './components/StepBar'
 import { STEPS, useStore } from './store'
+import Scene from './three/Scene'
 
-const Scene = lazy(() => import('./three/Scene'))
 
 export default function App() {
   const step = useStore((s) => s.step)
@@ -22,8 +23,20 @@ export default function App() {
   // Undo / redo shortcuts.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey)) return
       if ((e.target as HTMLElement).closest('input, textarea')) return
+      const st = useStore.getState()
+      if ((e.key === 'Delete' || e.key === 'Backspace') && st.selectedId) {
+        e.preventDefault()
+        st.removeSelected()
+        return
+      }
+      if (e.key === 'Escape') st.select(null)
+      if (!(e.ctrlKey || e.metaKey)) return
+      if (e.key.toLowerCase() === 'd' && st.selectedId) {
+        e.preventDefault()
+        st.duplicateSelected()
+        return
+      }
       if (e.key.toLowerCase() === 'z') {
         e.preventDefault()
         if (e.shiftKey) useStore.getState().redo()
@@ -52,6 +65,7 @@ export default function App() {
           {step === 'shape' && <ShapePanel />}
           {step === 'flavor' && <FlavorPanel />}
           {step === 'frosting' && <FrostingPanel />}
+          {step === 'decorate' && <DecoratePanel />}
           {step === 'background' && <BackgroundPanel />}
           {step === 'download' && <DownloadPanel />}
         </aside>

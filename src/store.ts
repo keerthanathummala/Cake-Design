@@ -63,6 +63,14 @@ export type UserSticker = { id: string; src: string; name: string }
 
 export type Message = { text: string; font: string; color: string }
 
+/** Where an automatically placed decoration goes. */
+export type Spot = 'top' | 'ring' | 'center' | 'front' | 'side' | 'ledge'
+/** Decorations waiting to be placed once the cake is in the scene. */
+export type QueueItem =
+  | { kind: 'topper'; topper: string; where: Spot; count: number; scale?: number }
+  | { kind: 'decal'; src: string; aspect: number; where: Spot }
+  | { kind: 'message'; where: Spot }
+
 type Design = {
   shape: CakeShape
   tiers: number
@@ -93,6 +101,8 @@ type State = Design & {
   dragging: boolean
   autoSpin: boolean
   userStickers: UserSticker[]
+  /** Placements to make on the next frame; `replace` clears earlier ones first. */
+  queue: { items: QueueItem[]; replace: boolean } | null
   recentColors: string[]
   past: Design[]
   future: Design[]
@@ -119,6 +129,7 @@ type State = Design & {
   setDragging: (d: boolean) => void
   setAutoSpin: (v: boolean) => void
   addUserSticker: (s: UserSticker) => void
+  enqueue: (items: QueueItem[], replace?: boolean) => void
   undo: () => void
   redo: () => void
 }
@@ -186,6 +197,7 @@ export const useStore = create<State>((set, get) => {
     dragging: false,
     autoSpin: false,
     userStickers: [],
+    queue: null,
     recentColors: [],
     past: [],
     future: [],
@@ -273,6 +285,10 @@ export const useStore = create<State>((set, get) => {
     setDragging: (dragging) => set({ dragging }),
     setAutoSpin: (autoSpin) => set({ autoSpin }),
     addUserSticker: (u) => set((s) => ({ userStickers: [u, ...s.userStickers] })),
+    enqueue: (items, replace = false) => {
+      if (!replace) remember('add' + newId())
+      set((s) => ({ queue: { items: [...(s.queue?.items ?? []), ...items], replace: replace || !!s.queue?.replace } }))
+    },
     undo: () => {
       const { past } = get()
       if (!past.length) return

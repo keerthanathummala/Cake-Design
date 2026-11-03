@@ -12,6 +12,28 @@ import { tierGeometry } from './tierGeometry'
 
 /** Shared registry of frosting meshes, so decorations can be placed on them. */
 export const cakeMeshes: { current: Mesh[] } = { current: [] }
+/** Bare sponge meshes, used as the surface when the cake is naked. */
+export const spongeMeshes: { current: Mesh[] } = { current: [] }
+/** False while the cake is dropping onto the stand. */
+export const cakeMotion = { settled: true }
+
+/** The meshes decorations stick to. */
+export function surfaces(): Mesh[] {
+  const list = cakeMeshes.current.length ? cakeMeshes.current : spongeMeshes.current
+  return list.filter((m) => m.parent)
+}
+
+function useRegister(list: { current: Mesh[] }, ref: { current: Mesh | null }, tier: number, dep: unknown) {
+  useEffect(() => {
+    const m = ref.current
+    if (!m) return
+    m.userData.tier = tier
+    list.current = [...list.current.filter((x) => x.userData.tier !== tier), m]
+    return () => {
+      list.current = list.current.filter((x) => x !== m)
+    }
+  }, [list, ref, tier, dep])
+}
 
 function useLerpColor(mat: { color: Color } | null, target: string, speed = 10) {
   const goal = useMemo(() => new Color(target), [target])
@@ -43,9 +65,11 @@ function Sponge({ o, box, color, filling, comic }: { o: Outline; box: TierBox; c
     [comic],
   )
   useLerpColor(fillMat, filling)
+  const ref = useRef<Mesh>(null)
+  useRegister(spongeMeshes, ref, box.index, geo)
   return (
     <group>
-      <mesh geometry={geo} material={[mat, mat]} castShadow receiveShadow>
+      <mesh ref={ref} geometry={geo} material={[mat, mat]} castShadow receiveShadow>
         {comic && <Outlines thickness={0.012} color="#111" />}
       </mesh>
       {[0.33, 0.66].map((f) => (
@@ -86,15 +110,7 @@ function Coat({ o, box, tierIndex }: { o: Outline; box: TierBox; tierIndex: numb
   useLerpColor(capTint, frosting)
 
   const ref = useRef<Mesh>(null)
-  useEffect(() => {
-    const m = ref.current
-    if (!m) return
-    m.userData.tier = tierIndex
-    cakeMeshes.current = [...cakeMeshes.current.filter((x) => x.userData.tier !== tierIndex), m]
-    return () => {
-      cakeMeshes.current = cakeMeshes.current.filter((x) => x !== m)
-    }
-  }, [tierIndex, geo])
+  useRegister(cakeMeshes, ref, tierIndex, geo)
 
   // Fault line: the exposed band inside the break.
   const band = useMemo(() => {
@@ -141,6 +157,7 @@ export default function Cake3D() {
   useFrame((_, dt) => {
     const d = drop.current
     if (!group.current) return
+    cakeMotion.settled = !d.active
     if (d.active) {
       // falling with gravity, then a damped bounce on the stand
       d.v -= 22 * Math.min(dt, 0.05)

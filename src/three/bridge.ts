@@ -6,4 +6,5 @@ export const bridge: {
   scene: Scene | null
   camera: Camera | null
   target: [number, number, number]
-} = { gl: null, scene: null, camera: null, target: [0, 1.2, 0] }
+  controls: { enabled: boolean } | null
+} = { gl: null, scene: null, camera: null, target: [0, 1.2, 0], controls: null }
