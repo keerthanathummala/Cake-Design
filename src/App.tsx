@@ -8,6 +8,7 @@ import DownloadPanel from './components/panels/DownloadPanel'
 import FlavorPanel from './components/panels/FlavorPanel'
 import FrostingPanel from './components/panels/FrostingPanel'
 import ShapePanel from './components/panels/ShapePanel'
+import StylePanel from './components/panels/StylePanel'
 import StepBar from './components/StepBar'
 import { STEPS, useStore } from './store'
 import Scene from './three/Scene'
@@ -64,6 +65,7 @@ export default function App() {
         <aside className="left-panel" aria-label="Options">
           {step === 'shape' && <ShapePanel />}
           {step === 'flavor' && <FlavorPanel />}
+          {step === 'style' && <StylePanel />}
           {step === 'frosting' && <FrostingPanel />}
           {step === 'decorate' && <DecoratePanel />}
           {step === 'background' && <BackgroundPanel />}
