@@ -162,3 +162,14 @@
   padding: 5px 10px;
   font-size: 13px;
 }
+
+.stage-center {
+  margin: 12px auto;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.stage {
+  touch-action: none;
+}

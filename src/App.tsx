@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import './App.css'
+import CakeStage from './components/CakeStage'
 import StepBar from './components/StepBar'
 import { STEPS, useStore } from './store'
 
@@ -44,7 +45,7 @@ export default function App() {
         </aside>
 
         <section className="stage-area">
-          <div className="stage-wrap" />
+          <CakeStage />
           <footer className="bottombar">
             <div className="spacer" />
             <button className="btn" disabled={idx === 0} onClick={() => setStep(STEPS[idx - 1].id)}>
