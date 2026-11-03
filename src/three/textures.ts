@@ -1,5 +1,6 @@
 import { CanvasTexture, RepeatWrapping, SRGBColorSpace, type Texture } from 'three'
 import { mix, shade } from '../lib/color'
+import { fontOf } from '../lib/fonts'
 
 // Procedural textures drawn on canvases, so the page needs no image files.
 
@@ -427,14 +428,14 @@ export function pressedFlowersTexture(base: string): Texture {
 
 /** Text drawn for a message plaque or piped writing. */
 export function messageTexture(text: string, font: string, color: string): { tex: Texture; aspect: number } {
-  const family =
-    font === 'script' ? '"Great Vibes", "Brush Script MT", cursive' : font === 'serif' ? '"Playfair Display", Georgia, serif' : font === 'hand' ? '"Caveat", "Comic Sans MS", cursive' : '"Helvetica Neue", Arial, sans-serif'
+  const f = fontOf(font)
+  const family = `"${f.family}", cursive`
   const size = 120
   const probe = document.createElement('canvas').getContext('2d')!
-  probe.font = `${font === 'sans' ? 700 : 400} ${size}px ${family}`
+  probe.font = `${f.weight} ${size}px ${family}`
   const lines = text.split('\n').slice(0, 3)
   const w = Math.max(...lines.map((l) => probe.measureText(l).width), 10) + 60
-  const h = lines.length * size * 1.15 + 40
+  const h = lines.length * size * 1.2 + 50
   const c = document.createElement('canvas')
   c.width = Math.ceil(w)
   c.height = Math.ceil(h)
@@ -442,14 +443,21 @@ export function messageTexture(text: string, font: string, color: string): { tex
   ctx.font = probe.font
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  // A slightly darker outline makes it read like piped icing.
+  // A slightly darker outline and a soft highlight make it read like piped icing.
   lines.forEach((l, i) => {
-    const y = 20 + size * 1.15 * (i + 0.5)
-    ctx.lineWidth = 6
+    const y = 25 + size * 1.2 * (i + 0.5)
+    ctx.lineJoin = 'round'
+    ctx.lineWidth = 7
     ctx.strokeStyle = shade(color, -0.25)
     ctx.strokeText(l, c.width / 2, y)
     ctx.fillStyle = color
     ctx.fillText(l, c.width / 2, y)
+    ctx.globalAlpha = 0.25
+    ctx.fillStyle = '#ffffff'
+    ctx.fillText(l, c.width / 2 - 2, y - 3)
+    ctx.globalAlpha = 1
+    ctx.fillStyle = color
+    ctx.fillText(l, c.width / 2, y + 1)
   })
   const tex = new CanvasTexture(c)
   tex.colorSpace = SRGBColorSpace
@@ -704,20 +712,40 @@ export function orangeSliceTexture(): Texture {
   })
 }
 
-/** Spiral stripes for birthday candles. */
-export function candleTexture(a: string, b: string): Texture {
-  return make(`candle-${a}-${b}`, 128, 256, (ctx) => {
+/** Candle wax pattern: stripes, polka dots, a spiral or plain, in two colors. */
+export function candleTexture(a: string, b: string, pattern = 'stripes'): Texture {
+  return make(`candle-${a}-${b}-${pattern}`, 128, 256, (ctx) => {
     ctx.fillStyle = a
     ctx.fillRect(0, 0, 128, 256)
     ctx.fillStyle = b
-    for (let y = -128; y < 384; y += 48) {
-      ctx.beginPath()
-      ctx.moveTo(0, y)
-      ctx.lineTo(128, y + 64)
-      ctx.lineTo(128, y + 84)
-      ctx.lineTo(0, y + 20)
-      ctx.closePath()
-      ctx.fill()
+    if (pattern === 'stripes') {
+      for (let y = -128; y < 384; y += 48) {
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(128, y + 64)
+        ctx.lineTo(128, y + 84)
+        ctx.lineTo(0, y + 20)
+        ctx.closePath()
+        ctx.fill()
+      }
+    } else if (pattern === 'dots') {
+      for (let y = 10; y < 256; y += 28) {
+        for (let x = ((y / 28) % 2) * 16 + 8; x < 140; x += 32) {
+          ctx.beginPath()
+          ctx.arc(x, y, 7, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+    } else if (pattern === 'rings') {
+      for (let y = 8; y < 256; y += 32) ctx.fillRect(0, y, 128, 12)
+    } else if (pattern === 'glitter') {
+      let s = 7
+      const r = () => ((s = (s * 16807) % 2147483647) / 2147483647)
+      for (let i = 0; i < 500; i++) {
+        ctx.globalAlpha = 0.5 + r() * 0.5
+        ctx.fillRect(r() * 128, r() * 256, 2.5, 2.5)
+      }
+      ctx.globalAlpha = 1
     }
   })
 }
