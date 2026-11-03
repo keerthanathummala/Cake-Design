@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import './App.css'
 import CakeStage from './components/CakeStage'
 import StepBar from './components/StepBar'
+import ColorPanel from './components/color/ColorPanel'
 import FlavorPanel from './components/panels/FlavorPanel'
 import FrostingPanel from './components/panels/FrostingPanel'
 import TierPanel from './components/panels/TierPanel'
@@ -42,7 +43,7 @@ export default function App() {
         <StepBar />
       </header>
 
-      <main className="workspace">
+      <main className="workspace" style={{ position: 'relative' }}>
         <aside className="left-panel" aria-label="Options">
           {step === 'tiers' && <TierPanel />}
           {step === 'flavor' && <FlavorPanel />}
@@ -65,6 +66,8 @@ export default function App() {
             </button>
           </footer>
         </section>
+
+        <ColorPanel />
       </main>
     </div>
   )
