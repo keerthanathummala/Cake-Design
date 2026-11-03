@@ -1,5 +1,6 @@
 import { createPortal, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { fontOf } from '../lib/fonts'
 import {
   Box3,
   Euler,
@@ -122,14 +123,29 @@ function processQueue(items: QueueItem[], replace: boolean) {
         selectedId = id
       }
     } else {
-      const h = spots(it.where, 1, 0)[0]
+      // a second message on top goes beside the first rather than on it
+      const msgs = decals.filter((d) => d.isMessage).length
+      const h = (it.kind === 'message' && it.where === 'top' && msgs ? spots('top', 1, msgs * 2 + 1)[0] : null) ?? spots(it.where, 1, 0)[0]
       if (!h) continue
       const id = newId()
       if (it.kind === 'message') {
-        decals = decals.filter((d) => !d.isMessage)
         const boxes = tierBoxes(s.tiers, s.base)
         const size = Math.min(1.5, (boxes[Math.min(h.tier, boxes.length - 1)].radius + COAT) * (it.where === 'top' ? 1.45 : 1.1))
-        decals.push({ id, src: '', tier: h.tier, position: arr(h.point), normal: arr(h.normal), size, aspect: 3, spin: 0, isMessage: true })
+        const m = s.message
+        decals.push({
+          id,
+          src: '',
+          tier: h.tier,
+          position: arr(h.point),
+          normal: arr(h.normal),
+          size,
+          aspect: 3,
+          spin: 0,
+          isMessage: true,
+          text: it.text ?? m.text,
+          font: it.font ?? m.font,
+          color: it.color ?? m.color,
+        })
       } else {
         decals.push({ id, src: it.src, tier: h.tier, position: arr(h.point), normal: arr(h.normal), size: 0.5, aspect: it.aspect, spin: 0 })
       }
@@ -167,6 +183,8 @@ function usePlacement() {
   const tiers = useStore((s) => s.tiers)
   const base = useStore((s) => s.base)
   const finish = useStore((s) => s.finish)
+  const looks = useStore((s) => s.tierStyles.map((t) => t?.finish ?? '').join())
+  const snapRun = useStore((s) => s.snapRun)
   const pendingSnap = useRef(false)
   const first = useRef(true)
   useEffect(() => {
@@ -176,7 +194,7 @@ function usePlacement() {
     }
     pendingSnap.current = true
     frames.current = 0
-  }, [shape, tiers, base, finish])
+  }, [shape, tiers, base, finish, looks, snapRun])
   useFrame(() => {
     const q = useStore.getState().queue
     if (!q && !pendingSnap.current) return
@@ -238,13 +256,33 @@ function SelectionRing({ radius, thin }: { radius: number; thin?: boolean }) {
   )
 }
 
+/** Height range of each model in its own units, measured once, for flipping. */
+const modelSpan = new Map<string, [number, number]>()
+
 function TopperItem({ t, selected }: { t: Topper; selected: boolean }) {
   const info = topperInfo(t.kind)
   const q = useMemo(() => surfaceQuat(t.normal, t.spin), [t.normal, t.spin])
   const onDown = useSurfaceDrag(t.id, (h) => useStore.getState().updateTopper(t.id, { position: arr(h.point), normal: arr(h.normal) }, 'drag' + t.id))
+  const flipRef = useRef<Group>(null)
+  const [span, setSpan] = useState(() => modelSpan.get(t.kind) ?? null)
+  useLayoutEffect(() => {
+    if (span || !flipRef.current) return
+    const g = flipRef.current
+    g.updateWorldMatrix(true, true)
+    const box = new Box3().setFromObject(g).applyMatrix4(g.matrixWorld.clone().invert())
+    const v: [number, number] = [box.min.y, box.max.y]
+    modelSpan.set(t.kind, v)
+    setSpan(v)
+  }, [span, t.kind])
+  // Upside down: turn over and lift so it still rests on the surface.
+  const lift = t.flip && span ? span[0] + span[1] : 0
   return (
     <group position={t.position} quaternion={q} scale={info.size * t.scale} onPointerDown={onDown} {...hover}>
-      <ModelOf kind={t.kind} />
+      <group rotation-x={((t.tilt ?? 0) * Math.PI) / 180}>
+        <group ref={flipRef} rotation-x={t.flip ? Math.PI : 0} position-y={lift}>
+          <ModelOf kind={t.kind} look={t} />
+        </group>
+      </group>
       {selected && <SelectionRing radius={0.62} />}
     </group>
   )
@@ -262,23 +300,26 @@ function useImageTexture(src: string) {
   }, [src])
 }
 
-function useMessageTexture(on: boolean): { tex: Texture; aspect: number } | null {
-  const msg = useStore((s) => s.message)
+function useMessageTexture(d: Decal): { tex: Texture; aspect: number } | null {
+  const draft = useStore((s) => s.message)
+  const on = !!d.isMessage
+  const text = d.text ?? draft.text
+  const font = d.font ?? draft.font
+  const color = d.color ?? draft.color
   const [fontsReady, setReady] = useState(0)
   useEffect(() => {
     if (!on || !document.fonts) return
-    const fam = msg.font === 'script' ? 'Great Vibes' : msg.font === 'serif' ? 'Playfair Display' : msg.font === 'hand' ? 'Caveat' : ''
-    if (!fam) return
-    document.fonts.load(`120px "${fam}"`).then(() => setReady((n) => n + 1), () => {})
-  }, [on, msg.font])
-  const out = useMemo(() => (on && msg.text.trim() ? messageTexture(msg.text, msg.font, msg.color) : null), [on, msg.text, msg.font, msg.color, fontsReady])
+    const f = fontOf(font)
+    document.fonts.load(`${f.weight} 120px "${f.family}"`).then(() => setReady((n) => n + 1), () => {})
+  }, [on, font])
+  const out = useMemo(() => (on && text.trim() ? messageTexture(text, font, color) : null), [on, text, font, color, fontsReady])
   useEffect(() => () => out?.tex.dispose(), [out])
   return out
 }
 
 function DecalItem({ d, selected }: { d: Decal; selected: boolean }) {
   const image = useImageTexture(d.isMessage ? '' : d.src)
-  const message = useMessageTexture(!!d.isMessage)
+  const message = useMessageTexture(d)
   const tex = d.isMessage ? message?.tex : image
   const aspect = d.isMessage ? (message?.aspect ?? 3) : d.aspect
   const mat = useMemo(

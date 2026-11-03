@@ -55,24 +55,47 @@ export function renderView(view: ViewId, width = 1600): string | null {
 type Downloads = { save: (r: { filename: string; data: Blob }) => Promise<unknown> }
 type ClaudeHost = { use?: (name: string) => Promise<unknown> }
 
+/** The host's capability namespace, or null outside the Claude viewer. */
+export function hostCapability<T>(name: string): Promise<T | null> {
+  const host = (window as unknown as { claude?: ClaudeHost }).claude
+  if (!host?.use) return Promise.resolve(null)
+  return host.use(name).then(
+    (v) => (v as T) ?? null,
+    () => null,
+  )
+}
+
+// Ask for the save capability up front, so a click can use it straight away.
+let downloadsReady: Promise<Downloads | null> | null = null
+export const warmDownloads = () => (downloadsReady ??= hostCapability<Downloads>('downloads'))
+
+/** Decode a data URL without fetch(), which the viewer's sandbox blocks. */
+export function dataUrlToBlob(url: string): Blob {
+  const [head, body] = url.split(',')
+  const mime = /data:([^;]+)/.exec(head)?.[1] ?? 'application/octet-stream'
+  const bin = atob(body)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return new Blob([bytes], { type: mime })
+}
+
 /**
  * Save a data URL as a file. Inside the Claude artifact viewer, plain download
  * links are blocked, so the viewer's own save prompt is used there instead.
+ * Resolves 'saved', or 'fallback' when only a plain browser download was tried.
  */
-export async function downloadDataUrl(url: string, filename: string): Promise<void> {
-  const host = (window as unknown as { claude?: ClaudeHost }).claude
-  if (host?.use) {
-    const downloads = (await host.use('downloads').catch(() => null)) as Downloads | null
-    if (downloads) {
-      const blob = await (await fetch(url)).blob()
-      await downloads.save({ filename, data: blob })
-      return
-    }
+export async function downloadDataUrl(url: string, filename: string): Promise<'saved' | 'fallback'> {
+  const downloads = await warmDownloads()
+  if (downloads) {
+    await downloads.save({ filename, data: dataUrlToBlob(url) })
+    return 'saved'
   }
   const a = document.createElement('a')
-  a.href = url
+  a.href = URL.createObjectURL(dataUrlToBlob(url))
   a.download = filename
   document.body.appendChild(a)
   a.click()
   a.remove()
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000)
+  return 'fallback'
 }

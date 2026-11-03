@@ -2,7 +2,7 @@ import { Outlines } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import { Color, MeshPhysicalMaterial, MeshToonMaterial, type Group, type Material, type Mesh } from 'three'
-import { FLAVORS, spongeColorOf, useStore } from '../store'
+import { FLAVORS, spongeColorOf, tierStyleOf, useStore } from '../store'
 import { COAT, tierBoxes, type TierBox } from './layout'
 import { frostingMaterials, MAPPED, NORMALIZED_V, SPRINKLES, toonGradient } from './materials'
 import { outlineOf, type Outline } from './outline'
@@ -19,8 +19,10 @@ export const cakeMotion = { settled: true }
 
 /** The meshes decorations stick to. */
 export function surfaces(): Mesh[] {
-  const list = cakeMeshes.current.length ? cakeMeshes.current : spongeMeshes.current
-  return list.filter((m) => m.parent)
+  const coats = cakeMeshes.current.filter((m) => m.parent)
+  const coated = new Set(coats.map((m) => m.userData.tier))
+  // a naked tier has no coat, so its sponge is the surface
+  return [...coats, ...spongeMeshes.current.filter((m) => m.parent && !coated.has(m.userData.tier))]
 }
 
 function useRegister(list: { current: Mesh[] }, ref: { current: Mesh | null }, tier: number, dep: unknown) {
@@ -80,10 +82,10 @@ function Sponge({ o, box, color, filling, comic }: { o: Outline; box: TierBox; c
 }
 
 function Coat({ o, box, tierIndex }: { o: Outline; box: TierBox; tierIndex: number }) {
-  const finish = useStore((s) => s.finish)
-  const frosting = useStore((s) => s.frostingColor)
-  const accent = useStore((s) => s.accentColor)
-  const piping = useStore((s) => s.pipingColor)
+  const finish = useStore((s) => tierStyleOf(s, tierIndex).finish)
+  const frosting = useStore((s) => tierStyleOf(s, tierIndex).frostingColor)
+  const accent = useStore((s) => tierStyleOf(s, tierIndex).accentColor)
+  const piping = useStore((s) => tierStyleOf(s, tierIndex).pipingColor)
   const normalizedV = NORMALIZED_V.includes(finish)
   const geo = useMemo(
     () =>
@@ -139,7 +141,7 @@ export default function Cake3D() {
   const tiers = useStore((s) => s.tiers)
   const base = useStore((s) => s.base)
   const flavor = useStore((s) => s.flavor)
-  const finish = useStore((s) => s.finish)
+  const finishes = useStore((s) => Array.from({ length: 3 }, (_, i) => tierStyleOf(s, i).finish).join())
   const sponge = useStore(spongeColorOf)
   const o = outlineOf(shape)
   const boxes = tierBoxes(tiers, base)
@@ -179,14 +181,14 @@ export default function Cake3D() {
   })
 
   if (!flavor) return null
-  const comic = finish === 'comic'
+  const finishOf = (i: number) => finishes.split(',')[i]
 
   return (
     <group ref={group}>
       {boxes.map((b) => (
         <group key={b.index} position-y={b.y}>
-          <Sponge o={o} box={b} color={sponge} filling={filling} comic={comic} />
-          {finish !== 'naked' && <Coat o={o} box={b} tierIndex={b.index} />}
+          <Sponge o={o} box={b} color={sponge} filling={filling} comic={finishOf(b.index) === 'comic'} />
+          {finishOf(b.index) !== 'naked' && <Coat o={o} box={b} tierIndex={b.index} />}
           <Piping o={o} box={b} isTop={b.index === boxes.length - 1} />
         </group>
       ))}

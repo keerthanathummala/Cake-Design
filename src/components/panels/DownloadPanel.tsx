@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { downloadDataUrl, renderView, VIEWS, type ViewId } from '../../lib/exportImage'
+import { downloadDataUrl, renderView, VIEWS, warmDownloads, type ViewId } from '../../lib/exportImage'
+import { SaveCake } from '../MyCakes'
 import { useStore } from '../../store'
 
 export default function DownloadPanel() {
@@ -9,7 +10,10 @@ export default function DownloadPanel() {
   const [thumbs, setThumbs] = useState<Partial<Record<ViewId, string>>>({})
   const [note, setNote] = useState('')
 
+  const [fallback, setFallback] = useState<string | null>(null)
+
   useEffect(() => {
+    void warmDownloads()
     select(null)
     setAutoSpin(false)
     // Let the deselect settle, then render a small preview of every view.
@@ -27,11 +31,14 @@ export default function DownloadPanel() {
     const url = renderView(view, 1600)
     if (!url) return
     setNote('')
+    setFallback(null)
     try {
       await downloadDataUrl(url, `my-cake-${view}.png`)
     } catch (e) {
       const code = (e as { code?: string })?.code
-      if (code !== 'declined') setNote("The download couldn't start here. Right-click or long-press the preview to save it.")
+      if (code === 'declined') return
+      setFallback(url)
+      setNote(code === 'rate_limited' ? 'A save prompt is already open. Finish that one first.' : "The download couldn't start here. Right-click or long-press the picture below to save it.")
     }
   }
 
@@ -50,7 +57,14 @@ export default function DownloadPanel() {
       <button className="btn primary wide" onClick={download}>
         Download {VIEWS.find((v) => v.id === view)?.label.toLowerCase()} view
       </button>
-      {note && <p className="error">{note}</p>}
+      {note && <p className="error-note">{note}</p>}
+      {fallback && (
+        <figure className="fallback-shot">
+          <img src={fallback} alt="Your cake, ready to save" />
+          <figcaption>Didn't get a file? Right-click or long-press this picture and choose Save image.</figcaption>
+        </figure>
+      )}
+      <SaveCake />
       <p className="panel-hint small" style={{ marginTop: 10 }}>
         Want a different angle? Pick "As you see it", turn the cake on the stage, then download.
       </p>

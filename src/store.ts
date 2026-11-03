@@ -44,6 +44,14 @@ export type Topper = {
   scale: number
   /** Spin around the surface normal, in degrees. */
   spin: number
+  /** Turned upside down (a cut face toward the cake, for example). */
+  flip?: boolean
+  /** Lean away from the surface normal, in degrees. */
+  tilt?: number
+  /** Candles: main color, second color and pattern. */
+  color?: string
+  color2?: string
+  pattern?: string
 }
 
 /** An image or message printed onto the cake surface. */
@@ -57,6 +65,10 @@ export type Decal = {
   aspect: number
   spin: number
   isMessage?: boolean
+  /** Message text, lettering and color (each message has its own). */
+  text?: string
+  font?: string
+  color?: string
 }
 
 export type UserSticker = { id: string; src: string; name: string }
@@ -69,9 +81,21 @@ export type Spot = 'top' | 'ring' | 'center' | 'front' | 'side' | 'ledge'
 export type QueueItem =
   | { kind: 'topper'; topper: string; where: Spot; count: number; scale?: number }
   | { kind: 'decal'; src: string; aspect: number; where: Spot }
-  | { kind: 'message'; where: Spot }
+  | { kind: 'message'; where: Spot; text?: string; font?: string; color?: string }
 
-type Design = {
+/** Frosting choices that can differ from tier to tier. */
+export type TierStyle = {
+  finish: Finish
+  frostingColor: string
+  accentColor: string
+  piping: Piping
+  pipingColor: string
+  /** Piping thickness, 1 = standard. */
+  pipingSize: number
+}
+const TIER_KEYS: (keyof TierStyle)[] = ['finish', 'frostingColor', 'accentColor', 'piping', 'pipingColor', 'pipingSize']
+
+export type Design = {
   shape: CakeShape
   tiers: number
   flavor: Flavor | null
@@ -81,6 +105,9 @@ type Design = {
   accentColor: string
   piping: Piping
   pipingColor: string
+  pipingSize: number
+  /** Per-tier overrides of the frosting, bottom tier first. */
+  tierStyles: Partial<TierStyle>[]
   drip: boolean
   dripColor: string
   base: Base
@@ -101,6 +128,12 @@ type State = Design & {
   dragging: boolean
   autoSpin: boolean
   userStickers: UserSticker[]
+  /** The saved cake this design was opened from or last saved as. */
+  savedId: string | null
+  /** Which tier the frosting step is editing; null = all tiers. */
+  frostTier: number | null
+  /** Bumped to ask decorations to settle back onto the cake surface. */
+  snapRun: number
   /** Placements to make on the next frame; `replace` clears earlier ones first. */
   queue: { items: QueueItem[]; replace: boolean } | null
   recentColors: string[]
@@ -130,6 +163,11 @@ type State = Design & {
   setAutoSpin: (v: boolean) => void
   addUserSticker: (s: UserSticker) => void
   enqueue: (items: QueueItem[], replace?: boolean) => void
+  setFrostTier: (t: number | null) => void
+  /** Change the frosting of the tier being edited (or of all tiers). */
+  setStyle: (patch: Partial<TierStyle>, undoKey?: string) => void
+  sliceSelected: () => void
+  loadDesign: (d: Design) => void
   undo: () => void
   redo: () => void
 }
@@ -144,6 +182,8 @@ export const initialDesign: Design = {
   accentColor: '#c9a46a',
   piping: 'none',
   pipingColor: '#fffaf2',
+  pipingSize: 1,
+  tierStyles: [],
   drip: false,
   dripColor: '#3b2016',
   base: 'stand',
@@ -197,6 +237,9 @@ export const useStore = create<State>((set, get) => {
     dragging: false,
     autoSpin: false,
     userStickers: [],
+    frostTier: null,
+    savedId: null,
+    snapRun: 0,
     queue: null,
     recentColors: [],
     past: [],
@@ -215,25 +258,73 @@ export const useStore = create<State>((set, get) => {
       remember('sponge')
       set({ spongeColor })
     },
-    setFrostingColor: (frostingColor) => {
-      remember('frostingColor')
-      set({ frostingColor })
-    },
-    setPipingColor: (pipingColor) => {
-      remember('pipingColor')
-      set({ pipingColor })
-    },
-    setAccentColor: (accentColor) => {
-      remember('accentColor')
-      set({ accentColor })
-    },
+    setFrostingColor: (frostingColor) => get().setStyle({ frostingColor }, 'frostingColor'),
+    setPipingColor: (pipingColor) => get().setStyle({ pipingColor }, 'pipingColor'),
+    setAccentColor: (accentColor) => get().setStyle({ accentColor }, 'accentColor'),
     setBackground: (background) => {
       remember('background')
       set({ background })
     },
     setPiping: (piping) => {
-      remember('piping')
-      set((s) => ({ piping, pipingRun: s.pipingRun + 1 }))
+      get().setStyle({ piping }, 'piping')
+      set((s) => ({ pipingRun: s.pipingRun + 1 }))
+    },
+    setFrostTier: (frostTier) => set({ frostTier }),
+    setStyle: (patch, key = Object.keys(patch).join(',')) => {
+      remember(key + (get().frostTier ?? 'all'))
+      const t = get().frostTier
+      if (t === null) {
+        // Editing all tiers: the change wins over any per-tier value of the same kind.
+        const keys = Object.keys(patch) as (keyof TierStyle)[]
+        set((s) => ({
+          ...patch,
+          tierStyles: s.tierStyles.map((ts) => {
+            const copy = { ...(ts ?? {}) }
+            keys.forEach((k) => delete copy[k])
+            return copy
+          }),
+        }))
+      } else {
+        set((s) => {
+          // no holes: every tier up to this one gets an entry
+          const tierStyles = Array.from({ length: Math.max(s.tierStyles.length, t + 1) }, (_, i) => s.tierStyles[i] ?? {})
+          tierStyles[t] = { ...tierStyles[t], ...patch }
+          return { tierStyles }
+        })
+      }
+    },
+    sliceSelected: () => {
+      const s = get()
+      const t = s.toppers.find((x) => x.id === s.selectedId)
+      const next = t && SLICE_NEXT[t.kind]
+      if (!t || !next) return
+      remember('slice' + t.id)
+      // Lay the pieces side by side across the surface.
+      const n = t.normal
+      const ref = Math.abs(n[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0]
+      const ax = [n[1] * ref[2] - n[2] * ref[1], n[2] * ref[0] - n[0] * ref[2], n[0] * ref[1] - n[1] * ref[0]]
+      const len = Math.hypot(ax[0], ax[1], ax[2]) || 1
+      const gap = 0.09 * t.scale * (next.count > 2 ? 0.8 : 1.3)
+      const pieces: Topper[] = Array.from({ length: next.count }, (_, i) => {
+        const o = (i - (next.count - 1) / 2) * gap
+        return {
+          ...t,
+          id: newId(),
+          kind: next.kind,
+          position: [t.position[0] + (ax[0] / len) * o, t.position[1] + (ax[1] / len) * o, t.position[2] + (ax[2] / len) * o] as [number, number, number],
+          spin: t.spin + (next.count > 2 ? (i - 1) * 18 : 0),
+          flip: false,
+        }
+      })
+      set((st) => ({
+        toppers: [...st.toppers.filter((x) => x.id !== t.id), ...pieces],
+        selectedId: pieces[0].id,
+        snapRun: st.snapRun + 1,
+      }))
+    },
+    loadDesign: (d) => {
+      remember('load' + newId())
+      set({ ...initialDesign, ...d, selectedId: null, frostTier: null, queue: null, snapRun: get().snapRun + 1 })
     },
     replayPiping: () => set((s) => ({ pipingRun: s.pipingRun + 1 })),
     addRecentColor: (c) => set((s) => ({ recentColors: [c, ...s.recentColors.filter((x) => x !== c)].slice(0, 8) })),
@@ -264,10 +355,10 @@ export const useStore = create<State>((set, get) => {
         const [x, y, z] = topper.position
         const n = topper.normal
         const off: [number, number, number] = n[1] > 0.7 ? [x + 0.12, y, z + 0.06] : [x, y + 0.1, z]
-        set((s) => ({ toppers: [...s.toppers, { ...topper, id, position: off }], selectedId: id }))
+        set((s) => ({ toppers: [...s.toppers, { ...topper, id, position: off }], selectedId: id, snapRun: s.snapRun + 1 }))
       } else if (decal) {
         const [x, y, z] = decal.position
-        set((s) => ({ decals: [...s.decals, { ...decal, id, position: [x + 0.1, y, z], isMessage: false }], selectedId: id }))
+        set((s) => ({ decals: [...s.decals, { ...decal, id, position: [x + 0.1, y, z] }], selectedId: id, snapRun: s.snapRun + 1 }))
       }
     },
     removeSelected: () => {
@@ -305,6 +396,31 @@ export const useStore = create<State>((set, get) => {
     },
   }
 })
+
+/** What slicing a fruit turns it into, and into how many pieces. */
+export const SLICE_NEXT: Record<string, { kind: string; count: number; label: string }> = {
+  strawberry: { kind: 'strawberry-half', count: 2, label: 'Cut in half' },
+  'strawberry-half': { kind: 'strawberry-slice', count: 3, label: 'Slice thinly' },
+  cherry: { kind: 'cherry-half', count: 2, label: 'Cut in half' },
+  orange: { kind: 'orange-half', count: 2, label: 'Cut in half' },
+}
+
+/** The frosting a tier actually gets: its own choices over the cake-wide ones. */
+export function tierStyleOf(s: Pick<Design, 'tierStyles' | keyof TierStyle>, tier: number): TierStyle {
+  const base = {} as Record<string, unknown>
+  for (const k of TIER_KEYS) base[k] = s[k]
+  return { ...(base as TierStyle), ...(s.tierStyles[tier] ?? {}) }
+}
+
+/** The frosting the frosting step is showing: one tier's, or the cake-wide one. */
+export function editedStyle(s: Pick<State, 'tierStyles' | 'frostTier' | keyof TierStyle>): TierStyle {
+  return tierStyleOf(s, s.frostTier ?? -1)
+}
+
+/** The design part of the state, for saving. */
+export function designOf(s: State): Design {
+  return snapshot(s)
+}
 
 /** The sponge color actually shown: a custom pick wins over the flavor default. */
 export const spongeColorOf = (s: Pick<State, 'flavor' | 'spongeColor'>) =>

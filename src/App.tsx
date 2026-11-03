@@ -2,6 +2,7 @@ import { Suspense, useEffect } from 'react'
 import './App.css'
 import BottomControls from './components/BottomControls'
 import ColorPanel from './components/color/ColorPanel'
+import MyCakes from './components/MyCakes'
 import BackgroundPanel from './components/panels/BackgroundPanel'
 import DecoratePanel from './components/panels/DecoratePanel'
 import DownloadPanel from './components/panels/DownloadPanel'
@@ -59,6 +60,7 @@ export default function App() {
           Cake Studio
         </div>
         <StepBar />
+        <MyCakes />
       </header>
 
       <main className="workspace">
