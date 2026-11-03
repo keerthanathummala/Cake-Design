@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import './App.css'
 import CakeStage from './components/CakeStage'
 import StepBar from './components/StepBar'
+import FlavorPanel from './components/panels/FlavorPanel'
 import TierPanel from './components/panels/TierPanel'
 import { STEPS, useStore } from './store'
 
@@ -43,6 +44,7 @@ export default function App() {
       <main className="workspace">
         <aside className="left-panel" aria-label="Options">
           {step === 'tiers' && <TierPanel />}
+          {step === 'flavor' && <FlavorPanel />}
         </aside>
 
         <section className="stage-area">

@@ -5,7 +5,7 @@ export const STAGE_H = 720
 
 export const CX = STAGE_W / 2
 /** Top surface of the cake stand plate. */
-export const PLATE_Y = 600
+export const PLATE_Y = 580
 
 export const TIER_H = 112
 /** Width of a tier by its position from the bottom (0 = bottom). */

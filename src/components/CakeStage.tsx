@@ -4,6 +4,7 @@ import { Layer, Rect, Stage } from 'react-konva'
 import { STAGE_H, STAGE_W } from '../lib/geometry'
 import { stageRef } from '../lib/stageRef'
 import { useStore } from '../store'
+import Cake from './cake/Cake'
 import Stand from './cake/Stand'
 import TierOutlines from './cake/TierOutlines'
 
@@ -57,6 +58,7 @@ export default function CakeStage() {
             <Rect name="bg" width={STAGE_W} height={STAGE_H} fill={background} />
             <Stand />
             {!flavor && <TierOutlines tiers={tiers} />}
+            <Cake />
           </Layer>
         </Stage>
       </div>
