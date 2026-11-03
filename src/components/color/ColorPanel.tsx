@@ -38,7 +38,8 @@ export default function ColorPanel() {
   const targets = useTargets()
   const addRecent = useStore((s) => s.addRecentColor)
   const recent = useStore((s) => s.recentColors)
-  const [open, setOpen] = useState(true)
+  // Start closed on phones so the cake keeps most of the screen.
+  const [open, setOpen] = useState(() => typeof window === 'undefined' || window.innerWidth > 820)
   const [pick, setPick] = useState<string | null>(null)
 
   if (!targets.length) return null

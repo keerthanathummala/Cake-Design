@@ -117,7 +117,7 @@ function PipingBag({ position, color }: { position: Vector3; color: string }) {
     <group position={position} rotation-z={-0.35}>
       <mesh position-y={0.3}>
         <coneGeometry args={[0.13, 0.5, 24, 1, true]} />
-        <meshPhysicalMaterial color="#ffffff" transmission={0.6} roughness={0.25} thickness={0.05} transparent opacity={0.7} side={2} />
+        <meshPhysicalMaterial color="#ffffff" roughness={0.25} clearcoat={1} transparent opacity={0.45} side={2} depthWrite={false} />
       </mesh>
       <mesh position-y={0.27} scale={[0.85, 0.75, 0.85]}>
         <coneGeometry args={[0.13, 0.5, 24]} />
