@@ -232,8 +232,9 @@ export default function StylePanel() {
 
   const apply = (p: Preset) => {
     const s = useStore.getState()
-    s.set({ ...p.design, styleId: p.id, ...(s.flavor ? {} : { flavor: 'vanilla' as const }) }, 'style')
+    s.set({ tierStyles: [], pipingSize: 1, ...p.design, styleId: p.id, ...(s.flavor ? {} : { flavor: 'vanilla' as const }) }, 'style')
     useStore.setState((st) => ({ pipingRun: st.pipingRun + 1 }))
+    useStore.setState({ frostTier: null })
     s.enqueue(p.decorations, true)
   }
 

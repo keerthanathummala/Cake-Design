@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { BufferGeometry, CapsuleGeometry, Color, SphereGeometry, MeshPhysicalMaterial, MeshToonMaterial, Vector2, Vector3 } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { usePipingProgress } from '../hooks/usePipingProgress'
-import { useStore, type Piping as PipingKind } from '../store'
+import { tierStyleOf, useStore, type Piping as PipingKind } from '../store'
 import { COAT, type TierBox } from './layout'
 import { toonGradient } from './materials'
 import { ring, type Outline } from './outline'
@@ -82,12 +82,12 @@ function beadStrokes(pts: Vector2[], y: number, size: number): Stroke[] {
   })
 }
 
-function strokesFor(kind: PipingKind, o: Outline, box: TierBox, isTop: boolean): Stroke[] {
+function strokesFor(kind: PipingKind, o: Outline, box: TierBox, isTop: boolean, size = 1): Stroke[] {
   const r = box.radius + COAT
   const topY = box.height + COAT
   const topRing = ring(o, r, -0.07)
   const footRing = ring(o, r, 0.012)
-  const s = 0.058
+  const s = 0.058 * size
   switch (kind) {
     case 'shell':
       return [...shells(topRing, topY + 0.005, s), ...shells(footRing, s * 0.55, s * 1.1)]
@@ -133,14 +133,15 @@ function PipingBag({ position, color }: { position: Vector3; color: string }) {
 
 /** Piped borders and decorations on one tier, plus an optional ganache drip. */
 export default function Piping({ o, box, isTop }: { o: Outline; box: TierBox; isTop: boolean }) {
-  const kind = useStore((s) => s.piping)
-  const color = useStore((s) => s.pipingColor)
-  const comic = useStore((s) => s.finish === 'comic')
+  const kind = useStore((s) => tierStyleOf(s, box.index).piping)
+  const color = useStore((s) => tierStyleOf(s, box.index).pipingColor)
+  const size = useStore((s) => tierStyleOf(s, box.index).pipingSize)
+  const comic = useStore((s) => tierStyleOf(s, box.index).finish === 'comic')
   const tiers = useStore((s) => s.tiers)
   const run = useStore((s) => s.pipingRun)
   const progress = usePipingProgress(run, 1400 * tiers)
 
-  const built = useMemo(() => buildStrokes(strokesFor(kind, o, box, isTop)), [kind, o, box, isTop])
+  const built = useMemo(() => buildStrokes(strokesFor(kind, o, box, isTop, size)), [kind, o, box, isTop, size])
   const mat = useMemo(
     () =>
       comic

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { FLAVORS, spongeColorOf, useStore } from '../../store'
+import { CANDLE_DEFAULT, isCandle } from '../../lib/toppers'
+import { editedStyle, FLAVORS, spongeColorOf, useStore } from '../../store'
 import ColorWheel from './ColorWheel'
 import ImageColorPicker from './ImageColorPicker'
 
@@ -21,15 +22,27 @@ function useTargets(): Target[] {
       },
     ]
   if (s.step === 'frosting' || s.step === 'style') {
+    const st = editedStyle(s)
     const out: Target[] = []
-    if (s.finish !== 'naked') out.push({ id: 'coat', label: 'Coat', value: s.frostingColor, set: s.setFrostingColor })
-    if (s.piping !== 'none' || s.finish === 'lace') out.push({ id: 'piping', label: 'Piping', value: s.pipingColor, set: s.setPipingColor })
-    if (s.finish === 'palette' || s.finish === 'marble') out.push({ id: 'accent', label: s.finish === 'marble' ? 'Veins' : 'Second', value: s.accentColor, set: s.setAccentColor })
+    if (st.finish !== 'naked') out.push({ id: 'coat', label: 'Coat', value: st.frostingColor, set: s.setFrostingColor })
+    if (st.piping !== 'none' || st.finish === 'lace') out.push({ id: 'piping', label: 'Piping', value: st.pipingColor, set: s.setPipingColor })
+    if (st.finish === 'palette' || st.finish === 'marble') out.push({ id: 'accent', label: st.finish === 'marble' ? 'Veins' : 'Second', value: st.accentColor, set: s.setAccentColor })
     if (s.drip) out.push({ id: 'drip', label: 'Drip', value: s.dripColor, set: (c) => s.set({ dripColor: c }, 'drip') })
     return out
   }
-  if (s.step === 'decorate' && s.message.text)
+  if (s.step === 'decorate') {
+    const t = s.toppers.find((x) => x.id === s.selectedId)
+    const d = s.decals.find((x) => x.id === s.selectedId)
+    if (t && isCandle(t.kind)) {
+      const base = t.kind === 'candle' ? CANDLE_DEFAULT : { color: '#bfe3f2', color2: '#ffffff' }
+      return [
+        { id: 'wax', label: 'Candle', value: t.color ?? base.color, set: (c) => s.updateTopper(t.id, { color: c }, 'wax' + t.id) },
+        { id: 'wax2', label: 'Pattern', value: t.color2 ?? base.color2, set: (c) => s.updateTopper(t.id, { color2: c }, 'wax2' + t.id) },
+      ]
+    }
+    if (d?.isMessage) return [{ id: 'message', label: 'Message', value: d.color ?? s.message.color, set: (c) => s.updateDecal(d.id, { color: c }, 'msgcolor' + d.id) }]
     return [{ id: 'message', label: 'Message', value: s.message.color, set: (c) => s.set({ message: { ...s.message, color: c } }, 'msgcolor') }]
+  }
   if (s.step === 'background') return [{ id: 'bg', label: 'Background', value: s.background, set: s.setBackground }]
   return []
 }
