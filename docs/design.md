@@ -4,6 +4,19 @@ Nov 3, 2026 · key
 
 Live version: https://claude.ai/artifact/JMRg2WqCpXHWMpDSJauYpM
 
+## Update: 3D, styles and realistic toppers (Nov 3, 2026)
+
+After the first build, the cake moved from flat images to a real-time 3D scene so it looks like a real cake and can be turned all the way around.
+
+- **Steps:** Shape, Flavor, Style, Frosting, Decorate, Background, Download.
+- **Shape:** round, square, heart or hexagon, 1 to 3 tiers, on a porcelain stand, gold stand, wooden board or in a bento box.
+- **360° view:** drag to orbit, zoom, or auto-spin. The download step offers front, three-quarter, left, right, back, top and the current angle.
+- **Frosting** covers the whole cake; piping and drip have their own colors.
+- **Styles** follow the style guide: Vintage (Lambeth, Marie Antoinette, royal icing lace), Modern (palette knife, fault line, marble, ganache drip), Minimalist (Korean bento, comic, message cake) and Rustic (semi-naked, pressed florals, tree bark, naked), filterable by aesthetic, icing type and event.
+- **Stickers became 3D toppers** (sliced strawberry with a real cut face, berries, roses, macarons, candles and more) that sit on the frosting and can be dragged over the top and sides. Uploaded pictures are printed onto the frosting, and messages are piped in one of four lettering styles.
+
+The sections below are the original design and are kept for reference.
+
 ## Overview
 
 The site is a playful, step-by-step cake builder: a visitor picks tiers, picks a flavor, frosts it, decorates it with stickers, sets a background, and downloads the result as an image. This doc covers the design only; no code gets written until it is approved.
