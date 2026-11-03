@@ -300,7 +300,7 @@ function useImageTexture(src: string) {
   }, [src])
 }
 
-function useMessageTexture(d: Decal): { tex: Texture; aspect: number } | null {
+function useMessageTexture(d: Decal): { tex: Texture; bump: Texture; aspect: number } | null {
   const draft = useStore((s) => s.message)
   const on = !!d.isMessage
   const text = d.text ?? draft.text
@@ -313,7 +313,13 @@ function useMessageTexture(d: Decal): { tex: Texture; aspect: number } | null {
     document.fonts.load(`${f.weight} 120px "${f.family}"`).then(() => setReady((n) => n + 1), () => {})
   }, [on, font])
   const out = useMemo(() => (on && text.trim() ? messageTexture(text, font, color) : null), [on, text, font, color, fontsReady])
-  useEffect(() => () => out?.tex.dispose(), [out])
+  useEffect(
+    () => () => {
+      out?.tex.dispose()
+      out?.bump.dispose()
+    },
+    [out],
+  )
   return out
 }
 
@@ -329,19 +335,24 @@ function DecalItem({ d, selected }: { d: Decal; selected: boolean }) {
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -4,
-        roughness: d.isMessage ? 0.35 : 0.5,
-        clearcoat: d.isMessage ? 0.5 : 0.1,
+        // messages are glossy piping gel: smooth, wet clear coat over raised letters
+        roughness: d.isMessage ? 0.14 : 0.5,
+        clearcoat: d.isMessage ? 1 : 0.1,
+        clearcoatRoughness: d.isMessage ? 0.04 : 0.3,
+        specularIntensity: d.isMessage ? 1 : 0.5,
       }),
     [d.isMessage],
   )
   useEffect(() => {
     mat.map = tex ?? null
+    mat.bumpMap = d.isMessage ? (message?.bump ?? null) : null
+    mat.bumpScale = 4
     // a little self-light so printed pictures keep their colors in shadow
     mat.emissiveMap = d.isMessage ? null : (tex ?? null)
     mat.emissive.set(d.isMessage ? '#000000' : '#ffffff')
     mat.emissiveIntensity = 0.3
     mat.needsUpdate = true
-  }, [mat, tex, d.isMessage])
+  }, [mat, tex, message, d.isMessage])
   const meshRef = useRef<Mesh>(null)
   const key = useRef('')
   // Rebuild the projected geometry when the decal moves or the cake changes.

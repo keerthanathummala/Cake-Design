@@ -427,7 +427,7 @@ export function pressedFlowersTexture(base: string): Texture {
 }
 
 /** Text drawn for a message plaque or piped writing. */
-export function messageTexture(text: string, font: string, color: string): { tex: Texture; aspect: number } {
+export function messageTexture(text: string, font: string, color: string): { tex: Texture; bump: Texture; aspect: number } {
   const f = fontOf(font)
   const family = `"${f.family}", cursive`
   const size = 120
@@ -436,32 +436,69 @@ export function messageTexture(text: string, font: string, color: string): { tex
   const lines = text.split('\n').slice(0, 3)
   const w = Math.max(...lines.map((l) => probe.measureText(l).width), 10) + 60
   const h = lines.length * size * 1.2 + 50
-  const c = document.createElement('canvas')
-  c.width = Math.ceil(w)
-  c.height = Math.ceil(h)
-  const ctx = c.getContext('2d')!
-  ctx.font = probe.font
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  // A slightly darker outline and a soft highlight make it read like piped icing.
-  lines.forEach((l, i) => {
-    const y = 25 + size * 1.2 * (i + 0.5)
+  const canvas = () => {
+    const c = document.createElement('canvas')
+    c.width = Math.ceil(w)
+    c.height = Math.ceil(h)
+    const ctx = c.getContext('2d')!
+    ctx.font = probe.font
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
     ctx.lineJoin = 'round'
+    return { c, ctx }
+  }
+  const ys = lines.map((_, i) => 25 + size * 1.2 * (i + 0.5))
+
+  // Color: a darker rim, the icing color, then a bright wet highlight along the upper edges.
+  const { c, ctx } = canvas()
+  const x = c.width / 2
+  lines.forEach((l, i) => {
     ctx.lineWidth = 7
-    ctx.strokeStyle = shade(color, -0.25)
-    ctx.strokeText(l, c.width / 2, y)
+    ctx.strokeStyle = shade(color, -0.3)
+    ctx.strokeText(l, x, ys[i])
     ctx.fillStyle = color
-    ctx.fillText(l, c.width / 2, y)
-    ctx.globalAlpha = 0.25
+    ctx.fillText(l, x, ys[i])
+  })
+  ctx.globalCompositeOperation = 'source-atop'
+  lines.forEach((l, i) => {
+    // soft sheen over the whole letter, brighter toward the top
+    const g = ctx.createLinearGradient(0, ys[i] - size / 2, 0, ys[i] + size / 2)
+    g.addColorStop(0, 'rgba(255,255,255,0.45)')
+    g.addColorStop(0.5, 'rgba(255,255,255,0.08)')
+    g.addColorStop(1, 'rgba(0,0,0,0.12)')
+    ctx.fillStyle = g
+    ctx.fillText(l, x, ys[i])
+    // crisp specular streak: white shifted up, then the color pushed back over all but a sliver
+    ctx.filter = 'blur(1.5px)'
+    ctx.globalAlpha = 0.85
     ctx.fillStyle = '#ffffff'
-    ctx.fillText(l, c.width / 2 - 2, y - 3)
+    ctx.fillText(l, x - 2, ys[i] - 4)
+    ctx.filter = 'none'
     ctx.globalAlpha = 1
     ctx.fillStyle = color
-    ctx.fillText(l, c.width / 2, y + 1)
+    ctx.fillText(l, x + 1, ys[i] + 1)
+    ctx.fillStyle = g
+    ctx.fillText(l, x + 1, ys[i] + 1)
   })
+  ctx.globalCompositeOperation = 'source-over'
+
+  // Height: blurred letters, so each stroke bulges like a rounded bead of gel.
+  const b = canvas()
+  b.ctx.fillStyle = '#000000'
+  b.ctx.fillRect(0, 0, b.c.width, b.c.height)
+  b.ctx.filter = 'blur(5px)'
+  b.ctx.fillStyle = '#ffffff'
+  b.ctx.strokeStyle = '#ffffff'
+  b.ctx.lineWidth = 5
+  lines.forEach((l, i) => {
+    b.ctx.strokeText(l, x, ys[i])
+    b.ctx.fillText(l, x, ys[i])
+  })
+
   const tex = new CanvasTexture(c)
   tex.colorSpace = SRGBColorSpace
-  return { tex, aspect: c.width / c.height }
+  const bump = new CanvasTexture(b.c)
+  return { tex, bump, aspect: c.width / c.height }
 }
 
 /** Light grey crumb used under a tint, so sponge color changes are instant. */
