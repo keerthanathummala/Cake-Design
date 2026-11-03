@@ -173,3 +173,41 @@
 .stage {
   touch-action: none;
 }
+
+.choice-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  text-align: left;
+  font-weight: 600;
+  color: var(--text);
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.choice:hover {
+  border-color: var(--accent);
+}
+
+.choice:active {
+  transform: scale(0.98);
+}
+
+.choice.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.choice small {
+  display: block;
+  font-weight: 400;
+  color: var(--text-2);
+}

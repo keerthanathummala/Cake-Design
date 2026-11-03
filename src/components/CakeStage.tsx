@@ -5,6 +5,7 @@ import { STAGE_H, STAGE_W } from '../lib/geometry'
 import { stageRef } from '../lib/stageRef'
 import { useStore } from '../store'
 import Stand from './cake/Stand'
+import TierOutlines from './cake/TierOutlines'
 
 /** The drawing area: background, stand, cake and stickers, scaled to fit. */
 export default function CakeStage() {
@@ -14,6 +15,8 @@ export default function CakeStage() {
   const zoom = useStore((s) => s.zoom)
   const background = useStore((s) => s.background)
   const select = useStore((s) => s.select)
+  const tiers = useStore((s) => s.tiers)
+  const flavor = useStore((s) => s.flavor)
 
   useEffect(() => {
     const el = wrapRef.current
@@ -53,6 +56,7 @@ export default function CakeStage() {
           <Layer>
             <Rect name="bg" width={STAGE_W} height={STAGE_H} fill={background} />
             <Stand />
+            {!flavor && <TierOutlines tiers={tiers} />}
           </Layer>
         </Stage>
       </div>
