@@ -1,5 +1,7 @@
 # Cake Studio
 
+> **Review only.** You may read this code and try the project. Downloading, forking or reusing it needs permission from k.thummala08@gmail.com. See [LICENSE](LICENSE).
+
 A step-by-step 3D cake builder website. Pick a shape and size, choose a flavor and watch the cake drop onto the stand, start from a design style, frost and pipe it, decorate it with realistic toppers, pictures and a message, then turn it all the way around and download the view you like.
 
 See [docs/design.md](docs/design.md) for the design.
@@ -33,3 +35,9 @@ npm run build   # outputs a static site in dist/
 ## Tech
 
 React, TypeScript and Vite. The cake is rendered in 3D with [three.js](https://threejs.org/) through [React Three Fiber](https://r3f.docs.pmnd.rs/) and drei; every model and texture is generated in code, so there are no image assets to load. App state lives in a small [Zustand](https://github.com/pmndrs/zustand) store.
+
+## Licence and permissions
+
+Copyright © 2026 Keerthana Thummala. All rights reserved.
+
+This code is shared for **review only**. You're welcome to read it and try the project. Downloading, cloning, forking, copying or reusing any part of it needs written permission. To ask, email **k.thummala08@gmail.com**. See [LICENSE](LICENSE).
